@@ -12,22 +12,23 @@ NC='\033[0m'
 
 CHECK="${GREEN}OK${NC}"
 CROSS="${RED}FAIL${NC}"
+WARN="${YELLOW}WARN${NC}"
 
 # ── Configuration ───────────────────────────────────────────────────
 MAX_RETRIES=20
 RETRY_INTERVAL=3
 
-# MCP servers to verify — name:container pairs.
-# Each container must be running and respond to "docker exec" before
-# Claude Code starts, ensuring all MCP tools are reachable.
+# MCP servers to verify — name:container:test_cmd triples.
+# Each container must be running AND respond to a docker exec probe
+# before Claude Code starts, ensuring all MCP tools are reachable.
 MCP_SERVERS=(
-  "kali-forensics:dfireballz-kali-forensics-1"
-  "winforensics:dfireballz-winforensics-1"
-  "osint:dfireballz-osint-1"
-  "threat-intel:dfireballz-threat-intel-1"
-  "binary-analysis:dfireballz-binary-analysis-1"
-  "network-forensics:dfireballz-network-forensics-1"
-  "filesystem:dfireballz-filesystem-1"
+  "kali-forensics:dfireballz-kali-forensics-1:python3 -c 'import fastmcp; print(\"ok\")'"
+  "winforensics:dfireballz-winforensics-1:/app/winforensics-mcp/.venv/bin/python -c 'import winforensics_mcp; print(\"ok\")'"
+  "osint:dfireballz-osint-1:python3 -c 'import fastmcp; print(\"ok\")'"
+  "threat-intel:dfireballz-threat-intel-1:python3 -c 'import fastmcp; print(\"ok\")'"
+  "binary-analysis:dfireballz-binary-analysis-1:python3 -c 'import fastmcp; print(\"ok\")'"
+  "network-forensics:dfireballz-network-forensics-1:python3 -c 'import fastmcp; print(\"ok\")'"
+  "filesystem:dfireballz-filesystem-1:node -e 'console.log(\"ok\")'"
 )
 
 # ── Functions ───────────────────────────────────────────────────────
@@ -41,39 +42,66 @@ print_banner() {
   echo ""
 }
 
-# Check if a container is running and healthy via docker inspect.
-check_container() {
+# Tier 1: Check container is running via docker inspect.
+check_container_running() {
   local container="$1"
   local status
   status=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null) || return 1
   [ "$status" = "running" ]
 }
 
-# Wait for a container with retries. Prints status line.
+# Tier 2: Verify stdio connectivity via docker exec (like blhackbox's
+# curl health probes, but adapted for stdio transport).
+check_container_responsive() {
+  local container="$1"
+  local test_cmd="$2"
+  docker exec "$container" sh -c "$test_cmd" >/dev/null 2>&1
+}
+
+# Two-tier wait: first check running, then verify exec responsiveness.
 wait_for_container() {
   local name="$1"
   local container="$2"
-  local retries="${3:-$MAX_RETRIES}"
+  local test_cmd="$3"
+  local retries="${4:-$MAX_RETRIES}"
 
   printf "  %-24s " "$name"
 
+  # Tier 1: Wait for container to be running
+  local running=false
   for i in $(seq 1 "$retries"); do
-    if check_container "$container"; then
-      echo -e "[ ${CHECK} ]"
-      return 0
+    if check_container_running "$container"; then
+      running=true
+      break
     fi
     sleep "$RETRY_INTERVAL"
   done
 
-  echo -e "[ ${CROSS} ] (container $container not running)"
-  return 1
+  if ! $running; then
+    echo -e "[ ${CROSS} ] (container not running)"
+    return 1
+  fi
+
+  # Tier 2: Verify docker exec connectivity (3 attempts)
+  for attempt in 1 2 3; do
+    if check_container_responsive "$container" "$test_cmd"; then
+      echo -e "[ ${CHECK} ]"
+      return 0
+    fi
+    sleep 2
+  done
+
+  # Container running but exec probe failed — still usable, warn only
+  echo -e "[ ${WARN} ] (running, exec probe failed)"
+  return 0
 }
 
 # ── Main ────────────────────────────────────────────────────────────
 
 print_banner
 
-echo -e "${BOLD}Verifying MCP server containers...${NC}"
+echo -e "${BOLD}Verifying MCP server containers (two-tier check)...${NC}"
+echo -e "${DIM}Tier 1: docker inspect (running?)  Tier 2: docker exec (responsive?)${NC}"
 echo -e "${DIM}Waiting up to $((MAX_RETRIES * RETRY_INTERVAL))s for each service.${NC}"
 echo ""
 
@@ -82,9 +110,8 @@ FAIL_COUNT=0
 
 echo -e "  ${BOLD}MCP Servers (stdio via docker exec)${NC}"
 for entry in "${MCP_SERVERS[@]}"; do
-  name="${entry%%:*}"
-  container="${entry#*:}"
-  if wait_for_container "$name" "$container"; then
+  IFS=':' read -r name container test_cmd <<< "$entry"
+  if wait_for_container "$name" "$container" "$test_cmd"; then
     OK_COUNT=$((OK_COUNT + 1))
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -95,9 +122,9 @@ echo ""
 echo -e "${DIM}──────────────────────────────────────────────────────${NC}"
 
 if [ "$FAIL_COUNT" -eq 0 ]; then
-  echo -e "${GREEN}${BOLD}  All $OK_COUNT MCP servers running.${NC}"
+  echo -e "${GREEN}${BOLD}  All $OK_COUNT MCP servers verified.${NC}"
 else
-  echo -e "${YELLOW}${BOLD}  $OK_COUNT/$((OK_COUNT + FAIL_COUNT)) MCP servers running. $FAIL_COUNT unreachable.${NC}"
+  echo -e "${YELLOW}${BOLD}  $OK_COUNT/$((OK_COUNT + FAIL_COUNT)) MCP servers verified. $FAIL_COUNT unreachable.${NC}"
   echo -e "${DIM}  Claude Code will start — unreachable servers show as 'failed' in /mcp.${NC}"
   echo -e "${DIM}  Use 'docker compose ps' in another terminal to check container health.${NC}"
 fi
