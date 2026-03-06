@@ -107,7 +107,7 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(case_id))
-            query = f"UPDATE cases SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"
+            query = f"UPDATE cases SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"  # nosec B608 — keys validated against _CASE_COLUMNS whitelist
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else None
 
@@ -254,7 +254,7 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(run_id))
-            query = f"UPDATE playbook_runs SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"
+            query = f"UPDATE playbook_runs SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"  # nosec B608 — keys validated against _RUN_COLUMNS whitelist
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else {}
 
