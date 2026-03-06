@@ -97,10 +97,10 @@ test-smoke:
 
 test-security:
 	@echo "Running Trivy image scan..."
-	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed or image not found"
+	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed — install from https://trivy.dev"
 	@echo ""
 	@echo "Running Bandit Python security scan..."
-	@docker compose run --rm orchestrator bandit -r . -x tests/ 2>/dev/null || echo "  Run 'make start' first"
+	bandit -r orchestrator/ mcp-servers/ -x orchestrator/tests/ -ll
 
 shell-kali:
 	docker compose exec kali-forensics bash

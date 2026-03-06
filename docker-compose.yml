@@ -8,6 +8,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 30s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -23,6 +24,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -38,6 +40,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -55,6 +58,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -75,6 +79,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -89,6 +94,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -107,6 +113,7 @@ services:
       - no-new-privileges:true
     healthcheck:
       start_period: 10s
+      start_interval: 2s
     volumes:
       - ./cases:/cases
       - ./evidence:/evidence:ro
@@ -122,6 +129,7 @@ services:
     container_name: dfireballz-db-1
     healthcheck:
       start_period: 10s
+      start_interval: 2s
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dfireballz}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_run_make_setup}

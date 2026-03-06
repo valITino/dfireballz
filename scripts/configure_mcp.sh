@@ -30,7 +30,7 @@ MCP_CONFIG='{
     },
     "winforensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-winforensics-1", "uv", "run", "python", "-m", "winforensics_mcp.server"],
+      "args": ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"],
       "description": "Windows artifacts: MFT, ShellBags, LNK, Registry, EVTX, Prefetch, browser history, timestomping"
     },
     "osint": {
@@ -102,7 +102,7 @@ case $MCP_HOST in
     args: ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "-m", "server"]
   winforensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-winforensics-1", "uv", "run", "python", "-m", "winforensics_mcp.server"]
+    args: ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"]
   osint:
     command: docker
     args: ["exec", "-i", "dfireballz-osint-1", "python3", "-m", "server"]

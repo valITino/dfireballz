@@ -42,6 +42,9 @@ USER investigator
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD /app/winforensics-mcp/.venv/bin/python -c "import winforensics_mcp; print('ok')" || exit 1
 
+# Ensure no inherited ENTRYPOINT interferes with CMD
+ENTRYPOINT []
+
 # Use venv python directly — uv run would re-sync against pyproject.toml
 # and fail on libscca-python/libesedb-python C extensions
 CMD ["/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"]
