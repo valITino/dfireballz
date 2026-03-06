@@ -4,14 +4,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-17-jre-headless \
-    radare2 \
+    openjdk-21-jre-headless \
     binutils \
     file \
     wget \
     unzip \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Install radare2 from GitHub (not available in Debian Trixie repos)
+RUN wget -q "https://github.com/radareorg/radare2/releases/latest/download/radare2_amd64.deb" -O /tmp/radare2.deb && \
+    dpkg -i /tmp/radare2.deb || apt-get install -f -y && \
+    rm /tmp/radare2.deb || true
 
 # Install Ghidra headless
 RUN wget -q "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.1.2_build/ghidra_11.1.2_PUBLIC_20240709.zip" -O /tmp/ghidra.zip && \
