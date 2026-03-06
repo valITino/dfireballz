@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir uv
 # Clone and install winforensics-mcp
 RUN git clone https://github.com/x746b/winforensics-mcp /app/winforensics-mcp
 WORKDIR /app/winforensics-mcp
-RUN uv sync || (uv venv && uv pip install -e ".")
+RUN uv sync || (uv venv --clear && uv pip install -e ".")
 # Optional: WinRM support for remote collection
 RUN uv pip install pywinrm 2>/dev/null || true
 
