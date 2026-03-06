@@ -1,0 +1,65 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Node
+node_modules/
+ui/node_modules/
+ui/dist/
+ui/build/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Evidence & Cases (never commit actual data)
+cases/*
+!cases/.gitkeep
+evidence/*
+!evidence/.gitkeep
+reports/*
+!reports/.gitkeep
+
+# Secrets
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json
+.env.*
+!.env.example
+
+# MCP configs (generated, may contain paths)
+.mcp.json
+
+# Logs
+*.log
+logs/

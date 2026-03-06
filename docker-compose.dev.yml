@@ -1,0 +1,33 @@
+services:
+  orchestrator:
+    build:
+      context: ./orchestrator
+      dockerfile: Dockerfile
+    volumes:
+      - ./orchestrator:/app
+      - ./cases:/cases
+      - ./evidence:/evidence
+      - ./reports:/reports
+      - ./playbooks:/app/playbooks:ro
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8800", "--reload"]
+    environment:
+      LOG_LEVEL: DEBUG
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+      target: build
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./ui/src:/app/src
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+  db:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"

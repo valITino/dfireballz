@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 215 28% 7%;
+    --foreground: 210 20% 90%;
+    --card: 215 22% 11%;
+    --card-foreground: 210 20% 90%;
+    --popover: 215 22% 11%;
+    --popover-foreground: 210 20% 90%;
+    --primary: 215 85% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 14% 18%;
+    --secondary-foreground: 210 20% 90%;
+    --muted: 215 14% 18%;
+    --muted-foreground: 215 8% 55%;
+    --accent: 215 85% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 3 90% 63%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 10% 22%;
+    --input: 215 10% 22%;
+    --ring: 215 85% 53%;
+    --radius: 0.5rem;
+    --success: 140 60% 48%;
+    --warning: 39 72% 49%;
+  }
+
+  * {
+    @apply border-surface-border;
+  }
+
+  body {
+    @apply bg-background text-text-primary;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #0D1117;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #30363D;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #484F58;
+  }
+}
+
+@layer components {
+  .card-forensic {
+    @apply bg-surface border border-surface-border rounded-lg p-4 transition-all duration-200;
+  }
+
+  .card-forensic:hover {
+    @apply border-accent/30 shadow-lg shadow-accent/5;
+  }
+
+  .badge-severity-critical {
+    @apply bg-critical/15 text-critical border border-critical/30 text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .badge-severity-high {
+    @apply bg-warning/15 text-warning border border-warning/30 text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .badge-severity-medium {
+    @apply bg-accent/15 text-accent border border-accent/30 text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .badge-severity-low {
+    @apply bg-success/15 text-success border border-success/30 text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .hash-display {
+    @apply font-mono text-xs text-text-secondary bg-background px-2 py-1 rounded border border-surface-border select-all;
+  }
+
+  .stat-card {
+    @apply card-forensic flex flex-col gap-1;
+  }
+
+  .btn-primary {
+    @apply bg-accent hover:bg-accent-hover text-white font-medium px-4 py-2 rounded-md transition-colors duration-150;
+  }
+
+  .btn-outline {
+    @apply border border-surface-border hover:border-accent/50 text-text-primary font-medium px-4 py-2 rounded-md transition-colors duration-150 hover:bg-surface-hover;
+  }
+
+  .input-field {
+    @apply bg-background border border-surface-border rounded-md px-3 py-2 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: fade-in 0.3s ease-out;
+  }
+}
