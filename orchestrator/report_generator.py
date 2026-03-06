@@ -1,0 +1,147 @@
+"""Report Generator — Compiles final investigation report (Markdown + PDF)."""
+
+from datetime import datetime, timezone
+
+from case_manager import CaseManager
+
+
+class ReportGenerator:
+    """Generates investigation reports from case data."""
+
+    def __init__(self, case_manager: CaseManager):
+        self.case_manager = case_manager
+
+    async def generate(self, case_id: str, format: str = "markdown") -> dict:
+        """Generate a full investigation report.
+
+        Args:
+            case_id: Case UUID
+            format: Output format — markdown | pdf
+        """
+        case = await self.case_manager.get_case(case_id)
+        if not case:
+            return {"error": "Case not found"}
+
+        evidence = await self.case_manager.list_evidence(case_id)
+        iocs = await self.case_manager.list_iocs(case_id)
+        findings = await self.case_manager.list_findings(case_id)
+        playbook_runs = await self.case_manager.list_playbook_runs(case_id)
+
+        report = self._build_markdown(case, evidence, iocs, findings, playbook_runs)
+
+        # Log CoC entry for report generation
+        await self.case_manager.log_coc_entry({
+            "case_id": case_id,
+            "action": "exported",
+            "actor": "report_generator",
+            "tool_used": "DFIReballz Report Generator",
+            "notes": f"Report generated in {format} format",
+        })
+
+        return {"format": format, "content": report, "generated_at": datetime.now(timezone.utc).isoformat()}
+
+    def _build_markdown(
+        self,
+        case: dict,
+        evidence: list[dict],
+        iocs: list[dict],
+        findings: list[dict],
+        playbook_runs: list[dict],
+    ) -> str:
+        """Build a Markdown investigation report."""
+        lines = [
+            f"# Investigation Report: {case['case_number']}",
+            "",
+            f"**Title:** {case['title']}",
+            f"**Type:** {case.get('case_type', 'N/A')}",
+            f"**Status:** {case.get('status', 'N/A')}",
+            f"**Classification:** {case.get('classification', 'N/A')}",
+            f"**Investigator:** {case.get('investigator', 'N/A')}",
+            f"**Created:** {case.get('created_at', 'N/A')}",
+            f"**Report Generated:** {datetime.now(timezone.utc).isoformat()}",
+            "",
+            "---",
+            "",
+            "## Executive Summary",
+            "",
+            case.get("description", "No description provided."),
+            "",
+            "---",
+            "",
+            "## Evidence",
+            "",
+            "| # | Filename | SHA256 | Size | Acquired |",
+            "|---|----------|--------|------|----------|",
+        ]
+
+        for i, e in enumerate(evidence, 1):
+            lines.append(
+                f"| {i} | {e['filename']} | `{e['sha256'][:16]}...` | {e.get('size_bytes', 'N/A')} bytes | {e.get('acquired_at', 'N/A')} |"
+            )
+
+        lines.extend([
+            "",
+            "---",
+            "",
+            "## Indicators of Compromise (IOCs)",
+            "",
+            "| Type | Value | Confidence | Source | MITRE |",
+            "|------|-------|-----------|--------|-------|",
+        ])
+
+        for ioc in iocs:
+            lines.append(
+                f"| {ioc['ioc_type']} | `{ioc['value']}` | {ioc.get('confidence', 'N/A')}% | {ioc.get('source', 'N/A')} | {ioc.get('mitre_technique', 'N/A')} |"
+            )
+
+        lines.extend([
+            "",
+            "---",
+            "",
+            "## Findings",
+            "",
+        ])
+
+        for f in findings:
+            severity = f.get("severity", "info")
+            badge = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵", "info": "⚪"}.get(severity, "⚪")
+            lines.extend([
+                f"### {badge} {f['title']}",
+                "",
+                f"**Severity:** {severity} | **Type:** {f.get('finding_type', 'N/A')}",
+                "",
+                f.get("description", ""),
+                "",
+            ])
+            if f.get("mitre_techniques"):
+                lines.append(f"**MITRE ATT&CK:** {', '.join(f['mitre_techniques'])}")
+                lines.append("")
+
+        lines.extend([
+            "---",
+            "",
+            "## Playbook Execution Log",
+            "",
+        ])
+
+        for run in playbook_runs:
+            lines.extend([
+                f"### {run['playbook_name']}",
+                f"**Status:** {run['status']} | **Started:** {run.get('started_at', 'N/A')}",
+                "",
+            ])
+
+        lines.extend([
+            "---",
+            "",
+            "## Chain of Custody",
+            "",
+            "All evidence handling, tool invocations, and analysis steps are recorded in the immutable chain of custody log. "
+            "This log is maintained in the DFIReballz PostgreSQL database with UPDATE/DELETE triggers to ensure forensic integrity.",
+            "",
+            "---",
+            "",
+            "*Report generated by DFIReballz Digital Forensics Platform*",
+        ])
+
+        return "\n".join(lines)

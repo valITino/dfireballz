@@ -1,0 +1,207 @@
+services:
+  # ─── Core MCP Servers (always start) ─────────────────────────────
+
+  kali-forensics:
+    build: ./mcp-servers/kali-forensics
+    container_name: dfireballz-kali-forensics-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+      - ./reports:/reports:ro
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  winforensics:
+    build: ./mcp-servers/winforensics
+    container_name: dfireballz-winforensics-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+      - ./reports:/reports:ro
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  osint:
+    build: ./mcp-servers/osint
+    container_name: dfireballz-osint-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+    environment:
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  threat-intel:
+    build: ./mcp-servers/threat-intel
+    container_name: dfireballz-threat-intel-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+    environment:
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
+      - ABUSEIPDB_API_KEY=${ABUSEIPDB_API_KEY:-}
+      - URLSCAN_API_KEY=${URLSCAN_API_KEY:-}
+      - VULNCHECK_API_KEY=${VULNCHECK_API_KEY:-}
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  binary-analysis:
+    build: ./mcp-servers/binary-analysis
+    container_name: dfireballz-binary-analysis-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  network-forensics:
+    build: ./mcp-servers/network-forensics
+    container_name: dfireballz-network-forensics-1
+    volumes:
+      - ./cases:/cases:ro
+      - ./evidence:/evidence:ro
+      - ./reports:/reports:ro
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  filesystem:
+    build: ./mcp-servers/filesystem
+    container_name: dfireballz-filesystem-1
+    volumes:
+      - ./cases:/cases
+      - ./evidence:/evidence:ro
+      - ./reports:/reports
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  # ─── Core Infrastructure (always start) ──────────────────────────
+
+  db:
+    build: ./database
+    container_name: dfireballz-db-1
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dfireballz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_run_make_setup}
+      POSTGRES_DB: ${POSTGRES_DB:-dfireballz}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: dfireballz-redis-1
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  orchestrator:
+    build: ./orchestrator
+    container_name: dfireballz-orchestrator-1
+    ports:
+      - "8800:8800"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dfireballz}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_run_make_setup}
+      POSTGRES_DB: ${POSTGRES_DB:-dfireballz}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dfireballz}:${POSTGRES_PASSWORD:-changeme_run_make_setup}@db:5432/${POSTGRES_DB:-dfireballz}
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-changeme}
+      MCP_HOST: ${MCP_HOST:-claude-code}
+    volumes:
+      - ./cases:/cases
+      - ./evidence:/evidence
+      - ./reports:/reports
+      - ./playbooks:/app/playbooks:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - db
+      - redis
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  ui:
+    build: ./ui
+    container_name: dfireballz-ui-1
+    ports:
+      - "3000:80"
+    depends_on:
+      - orchestrator
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  # ─── Open WebUI Scenario (--profile openwebui) ──────────────────
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dfireballz-ollama-1
+    profiles:
+      - openwebui
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: dfireballz-open-webui-1
+    profiles:
+      - openwebui
+    ports:
+      - "8080:8080"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:-changeme}
+    depends_on:
+      - ollama
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+  mcpo:
+    image: ghcr.io/open-webui/mcpo:main
+    container_name: dfireballz-mcpo-1
+    profiles:
+      - openwebui
+    ports:
+      - "8812:8000"
+    volumes:
+      - ./config/mcpo.json:/app/config.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    group_add:
+      - "${DOCKER_GID:-999}"
+    command: ["mcpo", "--config", "/app/config.json", "--api-key", "${MCPO_API_KEY:-changeme}"]
+    networks:
+      - dfireballz-net
+    restart: unless-stopped
+
+networks:
+  dfireballz-net:
+    driver: bridge
+
+volumes:
+  db-data:
+  redis-data:
+  ollama-data:

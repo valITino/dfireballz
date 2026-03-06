@@ -1,0 +1,34 @@
+{
+  "description": "mcpo configuration for Open WebUI scenario. Same format as Claude Desktop JSON config.",
+  "note": "Place this at ./config/mcpo.json — the mcpo container mounts it as /app/config.json",
+  "mcpServers": {
+    "kali-forensics": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "-m", "server"]
+    },
+    "winforensics": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-winforensics-1", "uv", "run", "python", "-m", "winforensics_mcp.server"]
+    },
+    "osint": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-osint-1", "python3", "-m", "server"]
+    },
+    "threat-intel": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-threat-intel-1", "python3", "-m", "server"]
+    },
+    "binary-analysis": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "-m", "server"]
+    },
+    "network-forensics": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-network-forensics-1", "python3", "-m", "server"]
+    },
+    "filesystem": {
+      "command": "docker",
+      "args": ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports"]
+    }
+  }
+}
