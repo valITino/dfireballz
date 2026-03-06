@@ -127,6 +127,8 @@ services:
   db:
     build: ./database
     container_name: dfireballz-db-1
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       start_period: 10s
       start_interval: 2s
@@ -143,6 +145,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dfireballz-redis-1
+    security_opt:
+      - no-new-privileges:true
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
@@ -153,6 +157,11 @@ services:
   orchestrator:
     build: ./orchestrator
     container_name: dfireballz-orchestrator-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     ports:
       - "8800:8800"
     environment:
@@ -181,6 +190,8 @@ services:
   ui:
     build: ./ui
     container_name: dfireballz-ui-1
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "3000:3000"
     depends_on:
@@ -252,6 +263,8 @@ services:
     container_name: dfireballz-ollama-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "11434:11434"
     volumes:
@@ -265,6 +278,8 @@ services:
     container_name: dfireballz-open-webui-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8080:8080"
     environment:
@@ -281,6 +296,8 @@ services:
     container_name: dfireballz-mcpo-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8812:8000"
     volumes:
