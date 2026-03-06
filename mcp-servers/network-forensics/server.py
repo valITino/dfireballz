@@ -1,6 +1,5 @@
 """Network Forensics MCP Server — 18-tool Wireshark/tshark suite + tcpdump capture."""
 
-import json
 import os
 import subprocess
 from pathlib import Path

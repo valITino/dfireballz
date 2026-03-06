@@ -1,6 +1,5 @@
 """OSINT MCP Server — Aggregates Maigret, Sherlock, Holehe, theHarvester, and more."""
 
-import json
 import subprocess
 from typing import Optional
 

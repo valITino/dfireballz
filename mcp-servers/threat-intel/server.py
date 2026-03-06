@@ -1,7 +1,6 @@
 """Threat Intelligence MCP Server — VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan."""
 
 import os
-from typing import Optional
 
 import requests
 from fastmcp import FastMCP
@@ -183,7 +182,7 @@ def cve_lookup(cve_id: str) -> dict:
     """
     try:
         resp = requests.get(
-            f"https://services.nvd.nist.gov/rest/json/cves/2.0",
+            "https://services.nvd.nist.gov/rest/json/cves/2.0",
             params={"cveId": cve_id},
             timeout=30,
         )

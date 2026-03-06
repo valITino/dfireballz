@@ -1,7 +1,6 @@
 """Report Generator — Compiles final investigation report (Markdown + PDF)."""
 
 from datetime import datetime, timezone
-from typing import Optional
 
 from case_manager import CaseManager
 

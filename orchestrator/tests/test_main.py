@@ -1,7 +1,5 @@
 """Tests for DFIReballz orchestrator."""
 
-import pytest
-
 
 def test_import_main():
     """Test that main module can be imported."""

@@ -3,7 +3,6 @@
 import hashlib
 import json
 import math
-import os
 import subprocess
 from collections import Counter
 from pathlib import Path
