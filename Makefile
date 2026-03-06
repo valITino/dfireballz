@@ -1,7 +1,7 @@
 # DFIReballz Makefile
 
 .PHONY: help setup start stop restart logs status build pull clean \
-        dev test test-unit test-security shell-kali shell-osint shell-netforensics \
+        dev test test-unit test-smoke test-security shell-kali shell-osint shell-netforensics \
         case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
         mcp-health-check
 
@@ -28,6 +28,7 @@ help:
 	@echo "  Development:"
 	@echo "    make dev            — Start in dev mode (hot reload)"
 	@echo "    make test           — Run all tests"
+	@echo "    make test-smoke     — Run container smoke tests (docker exec probes)"
 	@echo "    make test-security  — Run security scan (Trivy + Bandit)"
 	@echo "    make shell-kali     — Shell into Kali forensics container"
 	@echo "    make shell-osint    — Shell into OSINT container"
@@ -90,6 +91,9 @@ dev:
 
 test:
 	docker compose run --rm orchestrator pytest tests/ -v
+
+test-smoke:
+	@bash scripts/smoke-test.sh
 
 test-security:
 	@echo "Running Trivy image scan..."

@@ -59,8 +59,20 @@ Thumbs.db
 !CLAUDE.md
 !README.md
 
-# Docker compose override
+# Docker compose files (not needed in image builds)
+docker-compose.yml
+docker-compose.dev.yml
 docker-compose.override.yml
+Makefile
+
+# Tests (not needed in runtime containers)
+tests/
+**/tests/
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Logs
 *.log

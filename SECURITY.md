@@ -25,6 +25,10 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 - All containers run as non-root users
 - Evidence volumes are mounted read-only in MCP containers
 - No shared process namespaces
+- `security_opt: no-new-privileges:true` on all containers (prevents setuid escalation)
+- `pids_limit: 256` on claude-code container (fork bomb defense)
+- `tmpfs /tmp:noexec,nosuid` on claude-code (prevents temp directory code execution)
+- Docker socket mounted read-only where needed, with `group_add` for permission scoping
 
 ### Data Protection
 - API keys stored encrypted in PostgreSQL (pgcrypto)
@@ -46,5 +50,8 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 ### CI/CD Security
 - Trivy vulnerability scanning on all Docker images
 - Bandit static analysis on all Python code
+- pip-audit dependency vulnerability scanning on every CI run
 - CodeQL analysis on every PR to main
 - Dependabot for automated dependency updates
+- Docker Compose configuration validation (all profiles)
+- Container smoke tests (`make test-smoke`) for runtime verification

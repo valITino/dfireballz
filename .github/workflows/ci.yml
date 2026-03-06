@@ -26,6 +26,11 @@ jobs:
         run: |
           pip install -r orchestrator/requirements.txt
 
+      - name: Dependency vulnerability audit (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r orchestrator/requirements.txt
+
       - name: Python linting (ruff)
         run: |
           ruff check orchestrator/ mcp-servers/
