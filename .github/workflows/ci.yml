@@ -26,6 +26,11 @@ jobs:
         run: |
           pip install -r orchestrator/requirements.txt
 
+      - name: Dependency vulnerability audit (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r orchestrator/requirements.txt
+
       - name: Python linting (ruff)
         run: |
           ruff check orchestrator/ mcp-servers/
@@ -63,9 +68,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      - name: Validate docker-compose.yml
+        run: |
+          docker compose config --quiet
+          docker compose --profile claude-code config --quiet
+          docker compose --profile openwebui config --quiet
+
       - name: Build Docker images (no push)
         run: |
           docker compose build --parallel
+          docker compose --profile claude-code build claude-code
 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@master

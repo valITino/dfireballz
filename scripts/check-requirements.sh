@@ -48,6 +48,19 @@ else
     ERRORS=$((ERRORS + 1))
 fi
 
+# Docker socket
+if [ -S /var/run/docker.sock ]; then
+    DOCKER_GID=$(stat -c '%g' /var/run/docker.sock 2>/dev/null || echo "unknown")
+    echo "[OK] Docker socket: /var/run/docker.sock (GID: ${DOCKER_GID})"
+    if [ -w /var/run/docker.sock ]; then
+        echo "[OK] Docker socket: Writable by current user"
+    else
+        echo "[WARN] Docker socket: Not writable — run with sudo or add user to docker group"
+    fi
+else
+    echo "[WARN] Docker socket: /var/run/docker.sock not found"
+fi
+
 # NVIDIA GPU (optional)
 if command -v nvidia-smi &>/dev/null; then
     GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo "unknown")

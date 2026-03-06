@@ -29,6 +29,17 @@ make shell-kali     # Debug Kali container
 - Every evidence access must create a CoC log entry
 - Never log secrets or API keys
 
+```python
+# BAD — shell injection risk, violates project rules
+subprocess.run(f"volatility3 -f {dump_path} windows.pslist", shell=True)
+
+# GOOD — safe argument list, no shell interpretation
+subprocess.run(
+    ["volatility3", "-f", dump_path, "windows.pslist"],
+    capture_output=True, text=True, timeout=300
+)
+```
+
 ### Docker
 - Non-root users in all containers
 - Multi-stage builds where applicable

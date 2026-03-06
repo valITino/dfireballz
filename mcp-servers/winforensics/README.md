@@ -19,4 +19,4 @@ Windows artifact parsing from Linux — built from [x746b/winforensics-mcp](http
 
 ## Transport
 
-stdio only — connect via `docker exec -i dfireballz-winforensics-1 uv run python -m winforensics_mcp.server`
+stdio only — connect via `docker exec -i dfireballz-winforensics-1 /app/winforensics-mcp/.venv/bin/python -m winforensics_mcp.server`

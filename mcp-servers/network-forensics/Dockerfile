@@ -35,4 +35,5 @@ WORKDIR /app
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD python3 -c "import fastmcp; print('ok')" || exit 1
 
+ENTRYPOINT []
 CMD ["python3", "-m", "server"]

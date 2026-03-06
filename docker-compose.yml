@@ -4,6 +4,11 @@ services:
   kali-forensics:
     build: ./mcp-servers/kali-forensics
     container_name: dfireballz-kali-forensics-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 30s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -15,6 +20,11 @@ services:
   winforensics:
     build: ./mcp-servers/winforensics
     container_name: dfireballz-winforensics-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -26,6 +36,11 @@ services:
   osint:
     build: ./mcp-servers/osint
     container_name: dfireballz-osint-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -39,6 +54,11 @@ services:
   threat-intel:
     build: ./mcp-servers/threat-intel
     container_name: dfireballz-threat-intel-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -55,6 +75,11 @@ services:
   binary-analysis:
     build: ./mcp-servers/binary-analysis
     container_name: dfireballz-binary-analysis-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -65,6 +90,11 @@ services:
   network-forensics:
     build: ./mcp-servers/network-forensics
     container_name: dfireballz-network-forensics-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     volumes:
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
@@ -79,6 +109,11 @@ services:
   filesystem:
     build: ./mcp-servers/filesystem
     container_name: dfireballz-filesystem-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 10s
+      start_interval: 2s
     volumes:
       - ./cases:/cases
       - ./evidence:/evidence:ro
@@ -92,6 +127,11 @@ services:
   db:
     build: ./database
     container_name: dfireballz-db-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 10s
+      start_interval: 2s
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-dfireballz}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_run_make_setup}
@@ -105,6 +145,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: dfireballz-redis-1
+    security_opt:
+      - no-new-privileges:true
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
@@ -115,6 +157,11 @@ services:
   orchestrator:
     build: ./orchestrator
     container_name: dfireballz-orchestrator-1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      start_period: 15s
+      start_interval: 3s
     ports:
       - "8800:8800"
     environment:
@@ -132,8 +179,10 @@ services:
       - ./playbooks:/app/playbooks:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -141,13 +190,78 @@ services:
   ui:
     build: ./ui
     container_name: dfireballz-ui-1
+    security_opt:
+      - no-new-privileges:true
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
-      - orchestrator
+      orchestrator:
+        condition: service_healthy
     networks:
       - dfireballz-net
     restart: unless-stopped
+
+  # ─── Claude Code Container (--profile claude-code) ──────────────
+
+  claude-code:
+    build:
+      context: .
+      dockerfile: docker/claude-code.Dockerfile
+    container_name: dfireballz-claude-code-1
+    profiles:
+      - claude-code
+    stdin_open: true
+    tty: true
+    stop_grace_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 256
+    environment:
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      HOME: /home/claude
+      DFIREBALLZ_CONTAINER: "1"
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      # Prevent proxy interference with internal Docker DNS names
+      no_proxy: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ui,ollama,mcpo,open-webui,localhost,127.0.0.1"
+      NO_PROXY: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ui,ollama,mcpo,open-webui,localhost,127.0.0.1"
+    extra_hosts:
+      # Block access to host services via Docker bridge (tintinweb pattern)
+      - "host.docker.internal:127.0.0.1"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    tmpfs:
+      - /tmp:noexec,nosuid,size=512m
+    volumes:
+      - ./cases:/cases
+      - ./evidence:/evidence:ro
+      - ./reports:/reports
+      - ./CLAUDE.md:/workspace/CLAUDE.md:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persist Claude Code auth/config across container restarts
+      - claude-config:/home/claude/.claude
+    group_add:
+      - "${DOCKER_GID:-999}"
+    depends_on:
+      kali-forensics:
+        condition: service_healthy
+      winforensics:
+        condition: service_healthy
+      osint:
+        condition: service_healthy
+      threat-intel:
+        condition: service_healthy
+      binary-analysis:
+        condition: service_healthy
+      network-forensics:
+        condition: service_healthy
+      filesystem:
+        condition: service_healthy
+    networks:
+      - dfireballz-net
 
   # ─── Open WebUI Scenario (--profile openwebui) ──────────────────
 
@@ -156,6 +270,8 @@ services:
     container_name: dfireballz-ollama-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "11434:11434"
     volumes:
@@ -169,6 +285,8 @@ services:
     container_name: dfireballz-open-webui-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8080:8080"
     environment:
@@ -185,6 +303,8 @@ services:
     container_name: dfireballz-mcpo-1
     profiles:
       - openwebui
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "8812:8000"
     volumes:
@@ -205,3 +325,4 @@ volumes:
   db-data:
   redis-data:
   ollama-data:
+  claude-config:

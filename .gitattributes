@@ -1,0 +1,9 @@
+# Enforce LF line endings for shell scripts and Docker files.
+# Prevents CRLF issues that break container entrypoints on Windows.
+*.sh text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf
+Makefile text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

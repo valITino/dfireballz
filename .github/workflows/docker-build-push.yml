@@ -47,6 +47,9 @@ jobs:
             context: ./mcp-servers/filesystem
           - service: db
             context: ./database
+          - service: claude-code
+            context: .
+            dockerfile: docker/claude-code.Dockerfile
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -92,6 +95,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

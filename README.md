@@ -99,7 +99,7 @@ Dashboard: http://localhost:3000 | API: http://localhost:8800
 
 ## Installation Guide
 
-### Scenario A: Claude Code as MCP Host
+### Scenario A: Claude Code as MCP Host (host-installed)
 
 1. Install [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 2. Start DFIReballz:
@@ -109,11 +109,34 @@ Dashboard: http://localhost:3000 | API: http://localhost:8800
    make configure-mcp  # Generates .mcp.json
    ```
 3. Open Claude Code in the DFIReballz directory — all MCP tools auto-discovered
-4. Start investigating:
+4. The SessionStart hook (`.claude/hooks/session-start.sh`) automatically verifies Docker stack health
+5. Start investigating:
    ```
    > Analyze the malware sample at /evidence/sample.exe — run static analysis,
      extract strings, check YARA rules, and look up the hash on VirusTotal.
    ```
+
+### Scenario A2: Claude Code Containerized (no host install needed)
+
+Run Claude Code entirely inside Docker — no local Node.js or Claude Code installation required.
+
+1. Start DFIReballz:
+   ```bash
+   make setup
+   make start
+   ```
+2. Launch containerized Claude Code:
+   ```bash
+   make claude-code    # Requires ANTHROPIC_API_KEY in .env
+   ```
+3. The entrypoint verifies all 7 MCP servers are healthy (two-tier check: running + responsive) before launching the Claude CLI
+4. All MCP tools are pre-configured via stdio over `docker exec -i`
+
+The containerized Claude Code container includes:
+- `tini` for proper signal handling (clean `docker stop`)
+- DNS configuration for reliable Anthropic API access
+- `CLAUDE.md` mounted read-only at `/workspace` for project context
+- Evidence mounted read-only for chain-of-custody compliance
 
 ### Scenario B: Claude Desktop as MCP Host
 
@@ -231,11 +254,26 @@ API keys are stored encrypted in PostgreSQL (pgcrypto). Set them during `make se
 ## Development
 
 ```bash
-make dev            # Start with hot-reload
-make test           # Run unit tests
-make test-security  # Trivy + Bandit scan
-make shell-kali     # Shell into Kali container
-make shell-osint    # Shell into OSINT container
+make dev              # Start with hot-reload
+make test             # Run unit tests
+make test-security    # Trivy + Bandit scan
+make mcp-health-check # Check MCP server container health
+make shell-kali       # Shell into Kali container
+make shell-osint      # Shell into OSINT container
+```
+
+### Claude Code SessionStart Hook
+
+When Claude Code opens this project on the host, the `.claude/hooks/session-start.sh` hook runs automatically:
+- Checks Docker daemon is running
+- Ensures `.env` and `.mcp.json` exist (creates them if missing)
+- Runs the MCP health check to verify all 7 containers are responsive
+
+The health check script supports three modes:
+```bash
+bash .claude/mcp-health-check.sh           # Full diagnostic output
+bash .claude/mcp-health-check.sh --quiet   # Summary only
+bash .claude/mcp-health-check.sh --fix     # Auto-start stopped containers
 ```
 
 ---

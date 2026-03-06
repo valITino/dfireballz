@@ -1,8 +1,9 @@
 # DFIReballz Makefile
 
 .PHONY: help setup start stop restart logs status build pull clean \
-        dev test test-unit test-security shell-kali shell-osint shell-netforensics \
-        case-new playbook-list check-gpu configure-mcp start-openwebui
+        dev test test-unit test-smoke test-security shell-kali shell-osint shell-netforensics \
+        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
+        mcp-health-check
 
 help:
 	@echo "╔══════════════════════════════════════════╗"
@@ -17,6 +18,7 @@ help:
 	@echo "  Running:"
 	@echo "    make start          — Start all services (detached)"
 	@echo "    make start-openwebui — Start with Open WebUI + Ollama (--profile openwebui)"
+	@echo "    make claude-code    — Run Claude Code in Docker (interactive)"
 	@echo "    make stop           — Stop all services"
 	@echo "    make restart        — Restart all services"
 	@echo "    make status         — Show container health status"
@@ -26,12 +28,14 @@ help:
 	@echo "  Development:"
 	@echo "    make dev            — Start in dev mode (hot reload)"
 	@echo "    make test           — Run all tests"
+	@echo "    make test-smoke     — Run container smoke tests (docker exec probes)"
 	@echo "    make test-security  — Run security scan (Trivy + Bandit)"
 	@echo "    make shell-kali     — Shell into Kali forensics container"
 	@echo "    make shell-osint    — Shell into OSINT container"
 	@echo "    make shell-netforensics — Shell into Wireshark/tcpdump container"
 	@echo ""
 	@echo "  Utilities:"
+	@echo "    make mcp-health-check — Check MCP server container health"
 	@echo "    make check-gpu      — Check NVIDIA GPU availability"
 	@echo "    make clean          — Remove containers and images"
 	@echo "    make case-new       — Create a new case (interactive)"
@@ -62,8 +66,13 @@ start-openwebui:
 	@echo "  Open WebUI: http://localhost:8080"
 	@echo "  mcpo API bridge: http://localhost:8812"
 
+claude-code:
+	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
+		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
+	docker compose --profile claude-code run --rm claude-code
+
 stop:
-	docker compose --profile openwebui down
+	docker compose --profile claude-code --profile openwebui down
 
 restart:
 	docker compose restart
@@ -83,12 +92,15 @@ dev:
 test:
 	docker compose run --rm orchestrator pytest tests/ -v
 
+test-smoke:
+	@bash scripts/smoke-test.sh
+
 test-security:
 	@echo "Running Trivy image scan..."
-	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed or image not found"
+	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed — install from https://trivy.dev"
 	@echo ""
 	@echo "Running Bandit Python security scan..."
-	@docker compose run --rm orchestrator bandit -r . -x tests/ 2>/dev/null || echo "  Run 'make start' first"
+	bandit -r orchestrator/ mcp-servers/ -x orchestrator/tests/ -ll
 
 shell-kali:
 	docker compose exec kali-forensics bash
@@ -103,7 +115,7 @@ check-gpu:
 	@nvidia-smi 2>/dev/null && echo "NVIDIA GPU detected" || echo "No NVIDIA GPU found (GPU acceleration disabled)"
 
 clean:
-	docker compose --profile openwebui down -v --rmi local
+	docker compose --profile claude-code --profile openwebui down -v --rmi local
 
 case-new:
 	@echo "Creating new case..."
@@ -117,3 +129,6 @@ playbook-list:
 configure-mcp:
 	@bash scripts/configure_mcp.sh $(if $(MCP_HOST),--host $(MCP_HOST),)
 	@echo "MCP config generated for host: $(or $(MCP_HOST),claude-code)"
+
+mcp-health-check:
+	@bash .claude/mcp-health-check.sh

@@ -30,7 +30,7 @@ MCP_CONFIG='{
     },
     "winforensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-winforensics-1", "uv", "run", "python", "-m", "winforensics_mcp.server"],
+      "args": ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"],
       "description": "Windows artifacts: MFT, ShellBags, LNK, Registry, EVTX, Prefetch, browser history, timestomping"
     },
     "osint": {
@@ -67,6 +67,12 @@ case $MCP_HOST in
         echo "Written .mcp.json to project root"
         echo ""
         echo "Claude Code will auto-discover these MCP servers when opened in this directory."
+        echo ""
+        echo "Alternatively, run Claude Code fully containerized:"
+        echo "  make claude-code"
+        echo ""
+        echo "The containerized version waits for all MCP servers to be healthy"
+        echo "before starting.  Requires ANTHROPIC_API_KEY in .env."
         ;;
 
     claude-desktop)
@@ -96,7 +102,7 @@ case $MCP_HOST in
     args: ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "-m", "server"]
   winforensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-winforensics-1", "uv", "run", "python", "-m", "winforensics_mcp.server"]
+    args: ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"]
   osint:
     command: docker
     args: ["exec", "-i", "dfireballz-osint-1", "python3", "-m", "server"]
@@ -138,7 +144,7 @@ case $MCP_HOST in
 
     *)
         echo "Unknown MCP host: ${MCP_HOST}"
-        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui"
+        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui, claude-code-docker"
         exit 1
         ;;
 esac
