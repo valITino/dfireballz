@@ -8,6 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     build-essential \
+    pkg-config \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Chainsaw (pre-compiled binary for fast Sigma-based EVTX hunting)
