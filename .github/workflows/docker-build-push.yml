@@ -16,6 +16,30 @@ jobs:
     permissions:
       contents: write
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: orchestrator
+            context: ./orchestrator
+          - service: ui
+            context: ./ui
+          - service: kali-forensics
+            context: ./mcp-servers/kali-forensics
+          - service: winforensics
+            context: ./mcp-servers/winforensics
+          - service: osint
+            context: ./mcp-servers/osint
+          - service: threat-intel
+            context: ./mcp-servers/threat-intel
+          - service: binary-analysis
+            context: ./mcp-servers/binary-analysis
+          - service: network-forensics
+            context: ./mcp-servers/network-forensics
+          - service: filesystem
+            context: ./mcp-servers/filesystem
+          - service: db
+            context: ./database
     steps:
       - uses: actions/checkout@v4
 
@@ -35,18 +59,28 @@ jobs:
         id: version
         run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push orchestrator
+      - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v5
         with:
-          context: ./orchestrator
+          context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            crhacky/dfireballz:${{ steps.version.outputs.tag }}
-            crhacky/dfireballz:latest
+            crhacky/dfireballz-${{ matrix.service }}:${{ steps.version.outputs.tag }}
+            crhacky/dfireballz-${{ matrix.service }}:latest
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ github.ref_name }}
           generate_release_notes: true
