@@ -89,7 +89,7 @@ jobs:
             type=raw,value=${{ matrix.service }}-latest,enable={{is_default_branch}}
 
       - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           platforms: linux/amd64,linux/arm64
@@ -98,6 +98,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          provenance: false
+          sbom: false
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
