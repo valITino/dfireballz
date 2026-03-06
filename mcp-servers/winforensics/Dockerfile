@@ -22,7 +22,12 @@ RUN pip install --no-cache-dir uv
 # Clone and install winforensics-mcp
 RUN git clone https://github.com/x746b/winforensics-mcp /app/winforensics-mcp
 WORKDIR /app/winforensics-mcp
-RUN uv sync || (uv venv --clear && uv pip install -e ".")
+# uv sync fails on libscca-python/libesedb-python (C extensions needing autotools).
+# These are runtime-optional (try/except ImportError in parsers), so install without them.
+RUN uv venv && \
+    uv pip install -e "." --no-deps && \
+    uv pip install mcp python-evtx python-registry python-dateutil pefile mft pylnk3 && \
+    uv pip install libscca-python libesedb-python --only-binary=:all: 2>/dev/null || true
 # Optional: WinRM support for remote collection
 RUN uv pip install pywinrm 2>/dev/null || true
 
