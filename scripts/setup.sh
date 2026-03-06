@@ -117,7 +117,7 @@ case $MCP_CHOICE in
     *) MCP_HOST="claude-code" ;;
 esac
 
-sed -i "s/MCP_HOST=claude-code/MCP_HOST=${MCP_HOST}/" .env
+sed -i "s|MCP_HOST=claude-code|MCP_HOST=${MCP_HOST}|" .env
 echo "  MCP Host set to: ${MCP_HOST}"
 echo ""
 
@@ -127,22 +127,22 @@ echo ""
 
 read -rp "  VirusTotal API Key: " VT_KEY
 if [ -n "$VT_KEY" ]; then
-    sed -i "s/VIRUSTOTAL_API_KEY=/VIRUSTOTAL_API_KEY=${VT_KEY}/" .env
+    sed -i "s|VIRUSTOTAL_API_KEY=|VIRUSTOTAL_API_KEY=${VT_KEY}|" .env
 fi
 
 read -rp "  Shodan API Key: " SHODAN_KEY
 if [ -n "$SHODAN_KEY" ]; then
-    sed -i "s/SHODAN_API_KEY=/SHODAN_API_KEY=${SHODAN_KEY}/" .env
+    sed -i "s|SHODAN_API_KEY=|SHODAN_API_KEY=${SHODAN_KEY}|" .env
 fi
 
 read -rp "  AbuseIPDB API Key: " ABUSE_KEY
 if [ -n "$ABUSE_KEY" ]; then
-    sed -i "s/ABUSEIPDB_API_KEY=/ABUSEIPDB_API_KEY=${ABUSE_KEY}/" .env
+    sed -i "s|ABUSEIPDB_API_KEY=|ABUSEIPDB_API_KEY=${ABUSE_KEY}|" .env
 fi
 
 read -rp "  URLScan.io API Key: " URLSCAN_KEY
 if [ -n "$URLSCAN_KEY" ]; then
-    sed -i "s/URLSCAN_API_KEY=/URLSCAN_API_KEY=${URLSCAN_KEY}/" .env
+    sed -i "s|URLSCAN_API_KEY=|URLSCAN_API_KEY=${URLSCAN_KEY}|" .env
 fi
 
 echo ""
