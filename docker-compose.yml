@@ -149,6 +149,44 @@ services:
       - dfireballz-net
     restart: unless-stopped
 
+  # ─── Claude Code Container (--profile claude-code) ──────────────
+
+  claude-code:
+    build:
+      context: .
+      dockerfile: docker/claude-code.Dockerfile
+    container_name: dfireballz-claude-code-1
+    profiles:
+      - claude-code
+    stdin_open: true
+    tty: true
+    environment:
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+    volumes:
+      - ./cases:/cases
+      - ./evidence:/evidence:ro
+      - ./reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    group_add:
+      - "${DOCKER_GID:-999}"
+    depends_on:
+      kali-forensics:
+        condition: service_healthy
+      winforensics:
+        condition: service_healthy
+      osint:
+        condition: service_healthy
+      threat-intel:
+        condition: service_healthy
+      binary-analysis:
+        condition: service_healthy
+      network-forensics:
+        condition: service_healthy
+      filesystem:
+        condition: service_healthy
+    networks:
+      - dfireballz-net
+
   # ─── Open WebUI Scenario (--profile openwebui) ──────────────────
 
   ollama:

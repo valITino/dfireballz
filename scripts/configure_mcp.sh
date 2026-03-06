@@ -67,6 +67,12 @@ case $MCP_HOST in
         echo "Written .mcp.json to project root"
         echo ""
         echo "Claude Code will auto-discover these MCP servers when opened in this directory."
+        echo ""
+        echo "Alternatively, run Claude Code fully containerized:"
+        echo "  make claude-code"
+        echo ""
+        echo "The containerized version waits for all MCP servers to be healthy"
+        echo "before starting.  Requires ANTHROPIC_API_KEY in .env."
         ;;
 
     claude-desktop)
@@ -138,7 +144,7 @@ case $MCP_HOST in
 
     *)
         echo "Unknown MCP host: ${MCP_HOST}"
-        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui"
+        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui, claude-code-docker"
         exit 1
         ;;
 esac

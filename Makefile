@@ -2,7 +2,7 @@
 
 .PHONY: help setup start stop restart logs status build pull clean \
         dev test test-unit test-security shell-kali shell-osint shell-netforensics \
-        case-new playbook-list check-gpu configure-mcp start-openwebui
+        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code
 
 help:
 	@echo "╔══════════════════════════════════════════╗"
@@ -17,6 +17,7 @@ help:
 	@echo "  Running:"
 	@echo "    make start          — Start all services (detached)"
 	@echo "    make start-openwebui — Start with Open WebUI + Ollama (--profile openwebui)"
+	@echo "    make claude-code    — Run Claude Code in Docker (interactive)"
 	@echo "    make stop           — Stop all services"
 	@echo "    make restart        — Restart all services"
 	@echo "    make status         — Show container health status"
@@ -62,8 +63,13 @@ start-openwebui:
 	@echo "  Open WebUI: http://localhost:8080"
 	@echo "  mcpo API bridge: http://localhost:8812"
 
+claude-code:
+	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
+		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
+	docker compose --profile claude-code run --rm claude-code
+
 stop:
-	docker compose --profile openwebui down
+	docker compose --profile claude-code --profile openwebui down
 
 restart:
 	docker compose restart
@@ -103,7 +109,7 @@ check-gpu:
 	@nvidia-smi 2>/dev/null && echo "NVIDIA GPU detected" || echo "No NVIDIA GPU found (GPU acceleration disabled)"
 
 clean:
-	docker compose --profile openwebui down -v --rmi local
+	docker compose --profile claude-code --profile openwebui down -v --rmi local
 
 case-new:
 	@echo "Creating new case..."
