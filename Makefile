@@ -2,7 +2,8 @@
 
 .PHONY: help setup start stop restart logs status build pull clean \
         dev test test-unit test-security shell-kali shell-osint shell-netforensics \
-        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code
+        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
+        mcp-health-check
 
 help:
 	@echo "╔══════════════════════════════════════════╗"
@@ -33,6 +34,7 @@ help:
 	@echo "    make shell-netforensics — Shell into Wireshark/tcpdump container"
 	@echo ""
 	@echo "  Utilities:"
+	@echo "    make mcp-health-check — Check MCP server container health"
 	@echo "    make check-gpu      — Check NVIDIA GPU availability"
 	@echo "    make clean          — Remove containers and images"
 	@echo "    make case-new       — Create a new case (interactive)"
@@ -123,3 +125,6 @@ playbook-list:
 configure-mcp:
 	@bash scripts/configure_mcp.sh $(if $(MCP_HOST),--host $(MCP_HOST),)
 	@echo "MCP config generated for host: $(or $(MCP_HOST),claude-code)"
+
+mcp-health-check:
+	@bash .claude/mcp-health-check.sh

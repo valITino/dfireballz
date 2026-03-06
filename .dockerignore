@@ -1,0 +1,74 @@
+# DFIReballz Docker Build Context Exclusions
+# Critical for the claude-code Dockerfile which uses context: . (repo root).
+# Without this, the ENTIRE repo (including .git, evidence, node_modules)
+# gets sent as build context — wasting time, bandwidth, and leaking data.
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Evidence & case data (NEVER send into build context)
+cases/
+evidence/
+reports/
+
+# Environment files (may contain secrets)
+.env
+.env.*
+!config/.env.example
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Node artifacts
+node_modules/
+ui/node_modules/
+ui/dist/
+ui/build/
+.next/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# CI/CD (not needed in containers)
+.github/
+
+# Documentation (except CLAUDE.md which is mounted)
+*.md
+!CLAUDE.md
+!README.md
+
+# Docker compose override
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Secrets
+*.pem
+*.key
+*.crt
+credentials.json
+secrets.json

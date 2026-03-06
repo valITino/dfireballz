@@ -7,14 +7,22 @@
 
 FROM node:22-slim
 
-# Install Claude Code CLI
-RUN npm install -g @anthropic-ai/claude-code
+# Suppress npm update notices and reduce noise
+ENV NODE_ENV=production \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    npm_config_loglevel=error
+
+# Install Claude Code CLI and clean npm cache
+RUN npm install -g @anthropic-ai/claude-code \
+    && npm cache clean --force
 
 # Runtime utilities: curl for health checks, jq for JSON, docker-cli
 # for "docker exec -i" stdio transport to sibling MCP containers.
+# tini for proper PID 1 signal handling (SIGTERM/SIGINT propagation).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         jq \
+        tini \
         ca-certificates \
         gnupg \
     && install -m 0755 -d /etc/apt/keyrings \
@@ -37,4 +45,7 @@ COPY docker/mcp.json /workspace/.mcp.json
 COPY docker/claude-code-entrypoint.sh /usr/local/bin/claude-code-entrypoint.sh
 RUN chmod +x /usr/local/bin/claude-code-entrypoint.sh
 
-ENTRYPOINT ["/usr/local/bin/claude-code-entrypoint.sh"]
+# Use tini as PID 1 for proper signal forwarding to Claude Code process.
+# Without this, SIGTERM from `docker stop` may not reach the claude CLI,
+# causing a 10s timeout before SIGKILL on every container shutdown.
+ENTRYPOINT ["tini", "--", "/usr/local/bin/claude-code-entrypoint.sh"]
