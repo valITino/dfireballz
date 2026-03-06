@@ -17,7 +17,6 @@ jobs:
       contents: write
       packages: write
     strategy:
-      fail-fast: false
       matrix:
         include:
           - service: orchestrator
@@ -66,8 +65,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            crhacky/dfireballz-${{ matrix.service }}:${{ steps.version.outputs.tag }}
-            crhacky/dfireballz-${{ matrix.service }}:latest
+            crhacky/dfireballz:${{ matrix.service }}-${{ steps.version.outputs.tag }}
+            crhacky/dfireballz:${{ matrix.service }}-latest
           cache-from: type=gha,scope=${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
