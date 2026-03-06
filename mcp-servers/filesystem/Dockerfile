@@ -12,4 +12,5 @@ USER investigator
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD node -e "console.log('ok')" || exit 1
 
+ENTRYPOINT []
 CMD ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"]

@@ -35,15 +35,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
+# Non-root user for Claude Code process.
+# Docker socket access is granted via group_add in docker-compose.yml.
+RUN useradd -m -s /bin/bash -u 1001 claude && \
+    mkdir -p /workspace && \
+    chown -R claude:claude /workspace
+
 WORKDIR /workspace
 
 # Pre-configure MCP servers — stdio transport via docker exec -i.
 # Claude Code auto-discovers .mcp.json in the working directory.
-COPY docker/mcp.json /workspace/.mcp.json
+COPY --chown=claude:claude docker/mcp.json /workspace/.mcp.json
 
 # Entrypoint: verify all MCP containers are healthy, then launch Claude.
 COPY docker/claude-code-entrypoint.sh /usr/local/bin/claude-code-entrypoint.sh
 RUN chmod +x /usr/local/bin/claude-code-entrypoint.sh
+
+USER claude
 
 # Use tini as PID 1 for proper signal forwarding to Claude Code process.
 # Without this, SIGTERM from `docker stop` may not reach the claude CLI,

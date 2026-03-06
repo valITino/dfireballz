@@ -22,13 +22,15 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 
 ### Container Isolation
 - Every service runs in its own Docker container
-- All containers run as non-root users
+- All containers run as non-root users (MCP: `investigator`, Claude Code: `claude`)
 - Evidence volumes are mounted read-only in MCP containers
 - No shared process namespaces
 - `security_opt: no-new-privileges:true` on all containers (prevents setuid escalation)
 - `pids_limit: 256` on claude-code container (fork bomb defense)
 - `tmpfs /tmp:noexec,nosuid` on claude-code (prevents temp directory code execution)
 - Docker socket mounted read-only where needed, with `group_add` for permission scoping
+- `ENTRYPOINT []` on all MCP containers (prevents inherited entrypoints from interfering)
+- `tini` as PID 1 on claude-code for proper SIGTERM/SIGINT signal forwarding
 
 ### Data Protection
 - API keys stored encrypted in PostgreSQL (pgcrypto)

@@ -182,7 +182,7 @@ services:
     build: ./ui
     container_name: dfireballz-ui-1
     ports:
-      - "3000:80"
+      - "3000:3000"
     depends_on:
       orchestrator:
         condition: service_healthy
@@ -207,6 +207,7 @@ services:
     pids_limit: 256
     environment:
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      HOME: /home/claude
       DFIREBALLZ_CONTAINER: "1"
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
       NODE_OPTIONS: "--max-old-space-size=4096"
