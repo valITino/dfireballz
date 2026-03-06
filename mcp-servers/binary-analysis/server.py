@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 import subprocess
+import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Optional
@@ -63,8 +64,8 @@ def static_analyze(file_path: str) -> dict:
     with open(path, "rb") as f:
         data = f.read()
     results["size_bytes"] = len(data)
-    results["md5"] = hashlib.md5(data).hexdigest()
-    results["sha1"] = hashlib.sha1(data).hexdigest()
+    results["md5"] = hashlib.md5(data, usedforsecurity=False).hexdigest()
+    results["sha1"] = hashlib.sha1(data, usedforsecurity=False).hexdigest()
     results["sha256"] = hashlib.sha256(data).hexdigest()
 
     # PE analysis
@@ -149,7 +150,7 @@ def ghidra_decompile(binary_path: str, function_name_or_offset: Optional[str] = 
         function_name_or_offset: Specific function name or address offset to decompile
     """
     path = _validate_path(binary_path)
-    project_dir = "/tmp/ghidra-projects"
+    project_dir = tempfile.mkdtemp(prefix="ghidra-projects-")
     project_name = f"analysis_{path.stem}"
 
     cmd = [

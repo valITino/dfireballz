@@ -91,6 +91,8 @@ class CaseManager:
             row = await conn.fetchrow("SELECT * FROM cases WHERE id = $1", uuid.UUID(case_id))
             return dict(row) if row else None
 
+    _CASE_COLUMNS = frozenset({"title", "description", "status", "classification", "investigator"})
+
     async def update_case(self, case_id: str, updates: dict) -> Optional[dict]:
         """Update case fields."""
         if not updates:
@@ -100,6 +102,8 @@ class CaseManager:
             set_clauses = []
             params: list[Any] = []
             for idx, (key, value) in enumerate(updates.items(), 1):
+                if key not in self._CASE_COLUMNS:
+                    raise ValueError(f"Invalid column: {key}")
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(case_id))
@@ -118,8 +122,8 @@ class CaseManager:
         # Read file and compute hashes
         content = await file.read()
         sha256 = hashlib.sha256(content).hexdigest()
-        md5 = hashlib.md5(content).hexdigest()
-        sha1 = hashlib.sha1(content).hexdigest()
+        md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
+        sha1 = hashlib.sha1(content, usedforsecurity=False).hexdigest()
 
         # Save to evidence directory
         evidence_dir = EVIDENCE_DIR / case["case_number"]
@@ -237,12 +241,16 @@ class CaseManager:
             )
             return dict(row)
 
+    _RUN_COLUMNS = frozenset({"status", "results", "completed_at", "error", "steps"})
+
     async def update_playbook_run(self, run_id: str, updates: dict) -> dict:
         """Update a playbook run."""
         async with self.pool.acquire() as conn:
             set_clauses = []
             params: list[Any] = []
             for idx, (key, value) in enumerate(updates.items(), 1):
+                if key not in self._RUN_COLUMNS:
+                    raise ValueError(f"Invalid column: {key}")
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(run_id))
