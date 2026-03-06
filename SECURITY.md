@@ -31,6 +31,10 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 - Docker socket mounted read-only where needed, with `group_add` for permission scoping
 - `ENTRYPOINT []` on all MCP containers (prevents inherited entrypoints from interfering)
 - `tini` as PID 1 on claude-code for proper SIGTERM/SIGINT signal forwarding
+- `cap_drop: ALL` on claude-code container (drops all Linux capabilities)
+- SUID/SGID binary stripping in claude-code image (prevents privilege escalation)
+- Network recon tools removed from claude-code image (nc, netcat, netstat, ss)
+- Claude Code config persisted via named volume (survives container restarts)
 
 ### Data Protection
 - API keys stored encrypted in PostgreSQL (pgcrypto)

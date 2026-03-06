@@ -35,6 +35,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
+# Harden: strip SUID/SGID bits and remove recon tools (tintinweb pattern).
+# Prevents privilege escalation via setuid binaries and limits recon
+# capability if the container is compromised.
+RUN find / -xdev -perm -4000 -type f -exec chmod u-s {} \; 2>/dev/null || true && \
+    find / -xdev -perm -2000 -type f -exec chmod g-s {} \; 2>/dev/null || true && \
+    rm -f /usr/bin/nc /usr/bin/netcat /bin/netstat /usr/bin/ss 2>/dev/null || true
+
 # Non-root user for Claude Code process.
 # Docker socket access is granted via group_add in docker-compose.yml.
 RUN useradd -m -s /bin/bash -u 1001 claude && \

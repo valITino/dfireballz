@@ -215,6 +215,8 @@ services:
     stop_grace_period: 5s
     security_opt:
       - no-new-privileges:true
+    cap_drop:
+      - ALL
     pids_limit: 256
     environment:
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
@@ -236,6 +238,8 @@ services:
       - ./reports:/reports
       - ./CLAUDE.md:/workspace/CLAUDE.md:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Persist Claude Code auth/config across container restarts
+      - claude-config:/home/claude/.claude
     group_add:
       - "${DOCKER_GID:-999}"
     depends_on:
@@ -318,3 +322,4 @@ volumes:
   db-data:
   redis-data:
   ollama-data:
+  claude-config:
