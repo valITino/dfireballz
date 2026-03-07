@@ -87,7 +87,7 @@ bash scripts/check-requirements.sh
 ## Quick Start
 
 ```bash
-git clone https://github.com/crhacky/dfireballz.git
+git clone https://github.com/valITino/dfireballz.git
 cd dfireballz
 make setup    # Interactive setup wizard
 make start    # Start all services
@@ -133,10 +133,17 @@ Run Claude Code entirely inside Docker — no local Node.js or Claude Code insta
 4. All MCP tools are pre-configured via stdio over `docker exec -i`
 
 The containerized Claude Code container includes:
-- `tini` for proper signal handling (clean `docker stop`)
-- DNS configuration for reliable Anthropic API access
+- `tini` as PID 1 for proper signal handling (clean `docker stop`)
+- `cap_drop: ALL` — drops all Linux capabilities
+- `no-new-privileges:true` — prevents setuid escalation
+- `pids_limit: 256` — fork bomb defense
+- `tmpfs /tmp:noexec,nosuid` — prevents temp directory code execution
+- SUID/SGID binary stripping and network recon tools removed
+- `host.docker.internal` blocked (tintinweb/claudebox pattern)
+- DNS configuration (8.8.8.8, 1.1.1.1) for reliable Anthropic API access
 - `CLAUDE.md` mounted read-only at `/workspace` for project context
 - Evidence mounted read-only for chain-of-custody compliance
+- Claude Code config persisted via named volume (survives container restarts)
 
 ### Scenario B: Claude Desktop as MCP Host
 
@@ -256,10 +263,13 @@ API keys are stored encrypted in PostgreSQL (pgcrypto). Set them during `make se
 ```bash
 make dev              # Start with hot-reload
 make test             # Run unit tests
+make test-smoke       # Run container smoke tests (docker exec probes)
 make test-security    # Trivy + Bandit scan
 make mcp-health-check # Check MCP server container health
 make shell-kali       # Shell into Kali container
 make shell-osint      # Shell into OSINT container
+make shell-netforensics # Shell into Wireshark/tcpdump container
+make claude-code      # Run Claude Code in Docker (interactive)
 ```
 
 ### Claude Code SessionStart Hook
@@ -296,18 +306,22 @@ Database triggers prevent UPDATE and DELETE on CoC records, ensuring forensic in
 
 | Workflow | Trigger | Actions |
 |----------|---------|---------|
-| **CI** | Push/PR to main/develop | Lint, type check, unit tests, Bandit, Docker build, Trivy scan |
-| **Docker Build & Push** | Version tag (v*.*.*) | Build multi-arch, push to `crhacky/dfireballz` |
-| **CodeQL** | Push/PR to main + weekly | Static security analysis |
-| **Dependabot** | Weekly | Auto-update pip, npm, Docker, GitHub Actions dependencies |
+| **CI** | Push/PR to main/develop | Lint (ruff), type check (mypy), unit tests (pytest), pip-audit, Bandit, Docker Compose validation, Trivy scan |
+| **Docker Build & Push** | CI success + version tag (v*.*.*) | Build multi-arch (amd64/arm64), push to GHCR + Docker Hub (`crhacky/dfireballz`) |
+| **CodeQL** | Push/PR to main + weekly | Static security analysis (Python, JavaScript) |
 
 ---
 
-## Docker Hub
+## Container Images
+
+Images are published to both GHCR and Docker Hub:
 
 ```bash
+# Docker Hub
 docker pull crhacky/dfireballz:latest
-docker pull crhacky/dfireballz:v1.0.0
+
+# GitHub Container Registry
+docker pull ghcr.io/valitino/dfireballz:latest
 ```
 
 ---

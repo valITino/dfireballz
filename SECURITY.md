@@ -34,7 +34,10 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 - `cap_drop: ALL` on claude-code container (drops all Linux capabilities)
 - SUID/SGID binary stripping in claude-code image (prevents privilege escalation)
 - Network recon tools removed from claude-code image (nc, netcat, netstat, ss)
+- `host.docker.internal` blocked via extra_hosts mapping (prevents host service access)
+- `no_proxy`/`NO_PROXY` set to prevent proxy interference with internal Docker DNS
 - Claude Code config persisted via named volume (survives container restarts)
+- `.dockerignore` in every MCP server and root directory (prevents secret/build artifact leaks into images)
 
 ### Data Protection
 - API keys stored encrypted in PostgreSQL (pgcrypto)
@@ -57,7 +60,8 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 - Trivy vulnerability scanning on all Docker images
 - Bandit static analysis on all Python code
 - pip-audit dependency vulnerability scanning on every CI run
-- CodeQL analysis on every PR to main
-- Dependabot for automated dependency updates
+- CodeQL analysis on every PR to main (Python + JavaScript)
 - Docker Compose configuration validation (all profiles)
 - Container smoke tests (`make test-smoke`) for runtime verification
+- Multi-arch builds (amd64/arm64) with provenance attestations
+- Images pushed to both GHCR and Docker Hub

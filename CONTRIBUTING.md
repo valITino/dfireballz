@@ -13,11 +13,16 @@
 ## Development Workflow
 
 ```bash
-make setup          # First-time setup
-make dev            # Start development environment (hot-reload)
-make test           # Run unit tests
-make test-security  # Run security scans
-make shell-kali     # Debug Kali container
+make setup              # First-time setup
+make dev                # Start development environment (hot-reload)
+make test               # Run unit tests
+make test-smoke         # Run container smoke tests (docker exec probes)
+make test-security      # Run security scans (Trivy + Bandit)
+make mcp-health-check   # Check MCP server container health
+make shell-kali         # Debug Kali container
+make shell-osint        # Debug OSINT container
+make shell-netforensics # Debug Wireshark/tcpdump container
+make claude-code        # Run Claude Code in Docker (interactive)
 ```
 
 ## Code Standards
@@ -41,24 +46,30 @@ subprocess.run(
 ```
 
 ### Docker
-- Non-root users in all containers
+- Non-root users in all containers (MCP: `investigator`, Claude Code: `claude`)
+- `security_opt: no-new-privileges:true` on every container
+- `ENTRYPOINT []` on all MCP containers (prevents inherited entrypoint interference)
+- `.dockerignore` in every MCP server directory
 - Multi-stage builds where applicable
 - Health checks on every container
 - Evidence volumes read-only in MCP containers
 
 ### Adding a New MCP Server
 
-1. Create `mcp-servers/your-server/` with `Dockerfile`, `server.py`, `README.md`
+1. Create `mcp-servers/your-server/` with `Dockerfile`, `server.py`, `README.md`, `.dockerignore`
 2. Use FastMCP (`from fastmcp import FastMCP`)
-3. Add to `docker-compose.yml`
-4. Add to all MCP config files in `config/mcp_hosts/`
-5. Update `config/mcpo.json`
-6. Document in main README.md
-7. Add unit tests
+3. Dockerfile must include: non-root user, health check, `ENTRYPOINT []`
+4. Add `security_opt: no-new-privileges:true` in `docker-compose.yml`
+5. Add to all MCP config files in `config/mcp_hosts/`
+6. Update `config/mcpo.json`
+7. Document in main README.md MCP reference table
+8. Add unit tests
+9. Run `make configure-mcp` to regenerate `.mcp.json`
 
 ## Pull Request Requirements
 
-- All CI checks must pass
+- All CI checks must pass (lint, type check, pytest, pip-audit, Bandit, Docker build, Trivy)
 - No critical security vulnerabilities
 - Chain of custody logging preserved
 - Documentation updated for user-facing changes
+- Container smoke tests pass (`make test-smoke`)
