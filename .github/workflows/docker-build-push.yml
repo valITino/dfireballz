@@ -139,18 +139,19 @@ jobs:
           tags: crhacky/dfireballz:${{ matrix.service }}
 
       - name: Docker Scout - Vulnerability Scan
+        id: scout
         uses: docker/scout-action@v1
-        if: ${{ always() && matrix.scout }}
+        if: ${{ matrix.scout }}
         with:
           command: cves
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.service }}
           sarif-file: sarif.output.json
           summary: true
         continue-on-error: true
 
       - name: Upload SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: ${{ always() && matrix.scout }}
+        if: ${{ matrix.scout && steps.scout.outcome == 'success' }}
         with:
           sarif_file: sarif.output.json
         continue-on-error: true
