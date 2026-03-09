@@ -139,6 +139,8 @@ bash scripts/check-requirements.sh
 
 ## Installation
 
+All images are pre-built and published on [Docker Hub](https://hub.docker.com/r/crhacky/dfireballz). **No local building required.**
+
 ```bash
 # 1. Clone the repo
 git clone https://github.com/valITino/dfireballz.git
@@ -147,9 +149,12 @@ cd dfireballz
 # 2. Run interactive setup (generates .env, configures API keys)
 make setup
 
-# 3. Build and start all services (11 containers)
+# 3. Pull pre-built images from Docker Hub and start all services (11 containers)
 make start
 ```
+
+> **Want to build from source instead?** Run `make build` before `make start`.
+> This is only needed if you've modified Dockerfiles or server code locally.
 
 **Verify everything is running:**
 
@@ -513,10 +518,10 @@ bash .claude/mcp-health-check.sh --fix     # Auto-start stopped containers
 ## Makefile Shortcuts
 
 ```bash
-# Setup & Build
+# Setup
 make setup              # Interactive first-run setup wizard
-make build              # Build all custom Docker images
-make pull               # Pull all Docker images
+make pull               # Pull pre-built images from Docker Hub
+make build              # Build images locally from source (only if you modified Dockerfiles)
 
 # Running
 make start / make up    # Start all services (11 containers)

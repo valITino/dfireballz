@@ -28,8 +28,8 @@ help:
 	@echo ""
 	@echo "  Setup & Installation:"
 	@echo "    make setup              — Interactive first-run setup wizard"
-	@echo "    make pull               — Pull all Docker images"
-	@echo "    make build              — Build all custom Docker images"
+	@echo "    make pull               — Pull pre-built images from Docker Hub"
+	@echo "    make build              — Build images locally from source (dev only)"
 	@echo "    make venv               — Create Python venv and install package"
 	@echo "    make install            — Install dfireballz package in current env"
 	@echo "    make install-dev        — Install dfireballz with dev dependencies"
@@ -114,14 +114,16 @@ install-dev:
 # ─── Start / Stop ─────────────────────────────────────────────────────────────
 
 start up:
-	docker compose up -d
+	docker compose pull --ignore-pull-failures
+	docker compose up -d --no-build
 	@echo ""
 	@echo "  DFIReballz running at http://localhost:3000"
 	@echo "  Orchestrator API: http://localhost:8800"
 	@echo "  Run 'make configure-mcp' to generate .mcp.json for Claude Code / Claude Desktop"
 
 start-openwebui:
-	docker compose --profile openwebui up -d
+	docker compose --profile openwebui pull --ignore-pull-failures
+	docker compose --profile openwebui up -d --no-build
 	@echo ""
 	@echo "  DFIReballz + Open WebUI + Ollama running"
 	@echo "  Open WebUI: http://localhost:8080"
@@ -130,7 +132,8 @@ start-openwebui:
 claude-code:
 	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
 		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
-	docker compose --profile claude-code run --rm claude-code
+	docker compose --profile claude-code pull --ignore-pull-failures
+	docker compose --profile claude-code run --rm --no-build claude-code
 
 stop down:
 	docker compose --profile claude-code --profile openwebui down
@@ -245,7 +248,7 @@ shell-orchestrator:
 # ─── Development & Testing ─────────────────────────────────────────────────────
 
 dev:
-	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 test: test-pkg
 	docker compose run --rm orchestrator pytest tests/ -v 2>/dev/null || true
