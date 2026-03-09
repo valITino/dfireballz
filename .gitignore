@@ -18,6 +18,8 @@ build/
 htmlcov/
 .coverage
 .coverage.*
+.venv/
+venv/
 
 # Node
 node_modules/
