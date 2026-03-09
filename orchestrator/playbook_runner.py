@@ -1,12 +1,11 @@
 """Playbook Runner — Parses and executes investigation playbooks."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import frontmatter
-
 from case_manager import CaseManager
 
 PLAYBOOKS_DIR = Path("/app/playbooks")
@@ -41,7 +40,7 @@ class PlaybookRunner:
                 playbooks.append({"id": path.stem, "name": path.stem, "file": path.name})
         return playbooks
 
-    def get_playbook(self, name: str) -> Optional[dict]:
+    def get_playbook(self, name: str) -> dict | None:
         """Load a playbook by name or ID."""
         for path in PLAYBOOKS_DIR.glob("*.md"):
             if path.name == "README.md":
@@ -59,7 +58,7 @@ class PlaybookRunner:
         return None
 
     async def run(
-        self, case_id: str, playbook_name: str, evidence_id: Optional[str] = None
+        self, case_id: str, playbook_name: str, evidence_id: str | None = None
     ) -> dict:
         """Execute a playbook against a case."""
         playbook = self.get_playbook(playbook_name)
@@ -79,7 +78,7 @@ class PlaybookRunner:
                     "tool": step.get("tool"),
                     "action": step.get("action"),
                     "status": "pending",
-                    "started_at": datetime.now(timezone.utc).isoformat(),
+                    "started_at": datetime.now(UTC).isoformat(),
                 }
 
                 # Log the step as a CoC entry
@@ -93,7 +92,7 @@ class PlaybookRunner:
                 })
 
                 step_log["status"] = "completed"
-                step_log["completed_at"] = datetime.now(timezone.utc).isoformat()
+                step_log["completed_at"] = datetime.now(UTC).isoformat()
                 steps_log.append(step_log)
 
             # Update playbook run status
@@ -101,7 +100,7 @@ class PlaybookRunner:
                 run_id,
                 {
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc),
+                    "completed_at": datetime.now(UTC),
                     "steps": json.dumps(steps_log),
                 },
             )
@@ -118,7 +117,7 @@ class PlaybookRunner:
                 run_id,
                 {
                     "status": "failed",
-                    "completed_at": datetime.now(timezone.utc),
+                    "completed_at": datetime.now(UTC),
                     "steps": json.dumps(steps_log),
                     "error_message": str(e),
                 },

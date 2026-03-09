@@ -21,7 +21,7 @@ _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
     "bulk_extractor": {
         "container": "dfireballz-kali-forensics-1",
         "build": lambda p: [
-            "bulk_extractor", "-o", p.get("output", "/tmp/be_out"),
+            "bulk_extractor", "-o", p.get("output", "/tmp/be_out"),  # nosec B108
             p.get("image", ""),
         ],
     },
@@ -37,7 +37,7 @@ _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
         "container": "dfireballz-kali-forensics-1",
         "build": lambda p: [
             "foremost", "-i", p.get("image", ""),
-            "-o", p.get("output", "/tmp/foremost_out"),
+            "-o", p.get("output", "/tmp/foremost_out"),  # nosec B108
         ],
     },
     "sleuthkit": {

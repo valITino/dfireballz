@@ -1,6 +1,6 @@
 """Report Generator — Compiles final investigation report (Markdown + PDF)."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from case_manager import CaseManager
 
@@ -38,7 +38,7 @@ class ReportGenerator:
             "notes": f"Report generated in {format} format",
         })
 
-        return {"format": format, "content": report, "generated_at": datetime.now(timezone.utc).isoformat()}
+        return {"format": format, "content": report, "generated_at": datetime.now(UTC).isoformat()}
 
     def _build_markdown(
         self,
@@ -58,7 +58,7 @@ class ReportGenerator:
             f"**Classification:** {case.get('classification', 'N/A')}",
             f"**Investigator:** {case.get('investigator', 'N/A')}",
             f"**Created:** {case.get('created_at', 'N/A')}",
-            f"**Report Generated:** {datetime.now(timezone.utc).isoformat()}",
+            f"**Report Generated:** {datetime.now(UTC).isoformat()}",
             "",
             "---",
             "",
@@ -75,8 +75,13 @@ class ReportGenerator:
         ]
 
         for i, e in enumerate(evidence, 1):
+            sha_short = e['sha256'][:16]
+            size = e.get('size_bytes', 'N/A')
+            acquired = e.get('acquired_at', 'N/A')
             lines.append(
-                f"| {i} | {e['filename']} | `{e['sha256'][:16]}...` | {e.get('size_bytes', 'N/A')} bytes | {e.get('acquired_at', 'N/A')} |"
+                f"| {i} | {e['filename']} "
+                f"| `{sha_short}...` "
+                f"| {size} bytes | {acquired} |"
             )
 
         lines.extend([
@@ -90,8 +95,12 @@ class ReportGenerator:
         ])
 
         for ioc in iocs:
+            conf = ioc.get('confidence', 'N/A')
+            src = ioc.get('source', 'N/A')
+            mitre = ioc.get('mitre_technique', 'N/A')
             lines.append(
-                f"| {ioc['ioc_type']} | `{ioc['value']}` | {ioc.get('confidence', 'N/A')}% | {ioc.get('source', 'N/A')} | {ioc.get('mitre_technique', 'N/A')} |"
+                f"| {ioc['ioc_type']} | `{ioc['value']}` "
+                f"| {conf}% | {src} | {mitre} |"
             )
 
         lines.extend([
@@ -104,7 +113,11 @@ class ReportGenerator:
 
         for f in findings:
             severity = f.get("severity", "info")
-            badge = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵", "info": "⚪"}.get(severity, "⚪")
+            severity_badges = {
+                "critical": "🔴", "high": "🟠", "medium": "🟡",
+                "low": "🔵", "info": "⚪",
+            }
+            badge = severity_badges.get(severity, "⚪")
             lines.extend([
                 f"### {badge} {f['title']}",
                 "",
@@ -136,8 +149,11 @@ class ReportGenerator:
             "",
             "## Chain of Custody",
             "",
-            "All evidence handling, tool invocations, and analysis steps are recorded in the immutable chain of custody log. "
-            "This log is maintained in the DFIReballz PostgreSQL database with UPDATE/DELETE triggers to ensure forensic integrity.",
+            "All evidence handling, tool invocations, and analysis "
+            "steps are recorded in the immutable chain of custody "
+            "log. This log is maintained in the DFIReballz "
+            "PostgreSQL database with UPDATE/DELETE triggers to "
+            "ensure forensic integrity.",
             "",
             "---",
             "",

@@ -3,9 +3,9 @@
 import hashlib
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import asyncpg
 from fastapi import UploadFile
@@ -19,7 +19,7 @@ class CaseManager:
 
     def __init__(self, database_url: str):
         self.database_url = database_url
-        self.pool: Optional[asyncpg.Pool] = None
+        self.pool: asyncpg.Pool | None = None
 
     async def init(self):
         """Initialize database connection pool."""
@@ -41,7 +41,7 @@ class CaseManager:
         """Create a new investigation case."""
         async with self.pool.acquire() as conn:
             # Generate case number
-            year = datetime.now(timezone.utc).year
+            year = datetime.now(UTC).year
             count = await conn.fetchval(
                 "SELECT COUNT(*) FROM cases WHERE case_number LIKE $1",
                 f"DFIR-{year}-%",
@@ -49,8 +49,11 @@ class CaseManager:
             case_number = f"DFIR-{year}-{count + 1:03d}"
 
             row = await conn.fetchrow(
-                """INSERT INTO cases (case_number, title, case_type, description, classification, investigator)
-                   VALUES ($1, $2, $3, $4, $5, $6) RETURNING *""",
+                """INSERT INTO cases
+                   (case_number, title, case_type,
+                    description, classification, investigator)
+                   VALUES ($1, $2, $3, $4, $5, $6)
+                   RETURNING *""",
                 case_number,
                 data["title"],
                 data.get("case_type", "other"),
@@ -66,7 +69,7 @@ class CaseManager:
             return dict(row)
 
     async def list_cases(
-        self, status: Optional[str] = None, case_type: Optional[str] = None
+        self, status: str | None = None, case_type: str | None = None
     ) -> list[dict]:
         """List cases with optional filters."""
         async with self.pool.acquire() as conn:
@@ -85,7 +88,7 @@ class CaseManager:
             rows = await conn.fetch(query, *params)
             return [dict(r) for r in rows]
 
-    async def get_case(self, case_id: str) -> Optional[dict]:
+    async def get_case(self, case_id: str) -> dict | None:
         """Get case by ID."""
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM cases WHERE id = $1", uuid.UUID(case_id))
@@ -93,7 +96,7 @@ class CaseManager:
 
     _CASE_COLUMNS = frozenset({"title", "description", "status", "classification", "investigator"})
 
-    async def update_case(self, case_id: str, updates: dict) -> Optional[dict]:
+    async def update_case(self, case_id: str, updates: dict) -> dict | None:
         """Update case fields."""
         if not updates:
             return await self.get_case(case_id)
@@ -107,7 +110,10 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(case_id))
-            query = f"UPDATE cases SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"  # nosec B608 — keys validated against _CASE_COLUMNS whitelist
+            query = (  # nosec B608 — keys validated against _CASE_COLUMNS whitelist
+                f"UPDATE cases SET {', '.join(set_clauses)} "
+                f"WHERE id = ${len(params)} RETURNING *"
+            )
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else None
 
@@ -135,8 +141,11 @@ class CaseManager:
         async with self.pool.acquire() as conn:
             # Create evidence record
             row = await conn.fetchrow(
-                """INSERT INTO evidence (case_id, filename, filepath, file_type, sha256, md5, sha1, size_bytes, acquisition_method)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *""",
+                """INSERT INTO evidence
+                   (case_id, filename, filepath, file_type,
+                    sha256, md5, sha1, size_bytes, acquisition_method)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                   RETURNING *""",
                 uuid.UUID(case_id),
                 file.filename,
                 str(filepath),
@@ -150,7 +159,9 @@ class CaseManager:
 
             # Create CoC entry
             await conn.execute(
-                """INSERT INTO chain_of_custody_log (evidence_id, case_id, action, actor, tool_used, input_hash, notes)
+                """INSERT INTO chain_of_custody_log
+                   (evidence_id, case_id, action, actor,
+                    tool_used, input_hash, notes)
                    VALUES ($1, $2, $3, $4, $5, $6, $7)""",
                 row["id"],
                 uuid.UUID(case_id),
@@ -178,8 +189,11 @@ class CaseManager:
         """Add an IOC to a case."""
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
-                """INSERT INTO iocs (case_id, ioc_type, value, confidence, source, mitre_technique, notes)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *""",
+                """INSERT INTO iocs
+                   (case_id, ioc_type, value, confidence,
+                    source, mitre_technique, notes)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7)
+                   RETURNING *""",
                 uuid.UUID(case_id),
                 data["ioc_type"],
                 data["value"],
@@ -205,8 +219,12 @@ class CaseManager:
         """Add a finding to a case."""
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
-                """INSERT INTO findings (case_id, finding_type, title, description, severity, mitre_techniques, timeline_timestamp, raw_output)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *""",
+                """INSERT INTO findings
+                   (case_id, finding_type, title, description,
+                    severity, mitre_techniques,
+                    timeline_timestamp, raw_output)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                   RETURNING *""",
                 uuid.UUID(case_id),
                 data.get("finding_type"),
                 data["title"],
@@ -254,7 +272,10 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(run_id))
-            query = f"UPDATE playbook_runs SET {', '.join(set_clauses)} WHERE id = ${len(params)} RETURNING *"  # nosec B608 — keys validated against _RUN_COLUMNS whitelist
+            query = (  # nosec B608 — keys validated against _RUN_COLUMNS whitelist
+                f"UPDATE playbook_runs SET {', '.join(set_clauses)} "
+                f"WHERE id = ${len(params)} RETURNING *"
+            )
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else {}
 
@@ -274,8 +295,11 @@ class CaseManager:
         async with self.pool.acquire() as conn:
             row = await conn.fetchrow(
                 """INSERT INTO chain_of_custody_log
-                   (evidence_id, case_id, action, actor, tool_used, tool_version, input_hash, output_hash, notes, mcp_tool_call)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *""",
+                   (evidence_id, case_id, action, actor,
+                    tool_used, tool_version, input_hash,
+                    output_hash, notes, mcp_tool_call)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                   RETURNING *""",
                 data.get("evidence_id"),
                 uuid.UUID(data["case_id"]) if data.get("case_id") else None,
                 data["action"],
