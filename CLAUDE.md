@@ -69,7 +69,7 @@ should reflect the context of a professional forensic investigator.
 - `make shell-orchestrator` — Debug orchestrator container
 
 ### Per-Service Operations
-- `make log-<service>` — Tail logs (kali, osint, netforensics, winforensics, binary, threat, filesystem, orchestrator, ui, db, redis)
+- `make log-<service>` — Tail logs (kali, osint, netforensics, winforensics, binary, threat, filesystem, orchestrator, db, redis)
 - `make restart-<service>` — Restart a specific service
 
 ### Utilities
@@ -87,7 +87,6 @@ should reflect the context of a professional forensic investigator.
 - **Ollama note:** Ollama has NO native MCP support. Use MCPHost (`mark3labs/mcphost`) or
   Open WebUI + mcpo proxy as the bridge. MCPHost model syntax: `mcphost -m ollama/qwen3:8b --config ~/.mcphost.yml`
 - Orchestrator API (port 8800) manages cases, evidence, and playbooks
-- UI (port 3000) is the investigator-facing dashboard
 - For Open WebUI scenario: mcpo container (port 8812) exposes MCP servers as OpenAPI endpoints.
   The mcpo container needs `/var/run/docker.sock` mounted to run `docker exec` commands.
 
