@@ -15,12 +15,14 @@ import { cn } from './lib/utils';
 import Dashboard from './pages/Dashboard';
 import CaseView from './pages/CaseView';
 import NewCase from './pages/NewCase';
+import Evidence from './pages/Evidence';
 import Playbooks from './pages/Playbooks';
 import Settings from './pages/Settings';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/cases/new', icon: PlusCircle, label: 'New Case' },
+  { to: '/evidence', icon: FolderOpen, label: 'Evidence' },
   { to: '/playbooks', icon: BookOpen, label: 'Playbooks' },
   { to: '/settings', icon: SettingsIcon, label: 'Settings' },
 ];
@@ -119,6 +121,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/cases/new" element={<NewCase />} />
             <Route path="/cases/:caseId" element={<CaseView />} />
+            <Route path="/evidence" element={<Evidence />} />
             <Route path="/playbooks" element={<Playbooks />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>

@@ -4,7 +4,8 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 1.x     | Yes                |
+| 2.x     | Yes                |
+| 1.x     | Security fixes only|
 | < 1.0   | No                 |
 
 ## Reporting a Vulnerability
@@ -41,23 +42,27 @@ If you discover a security vulnerability in DFIReballz, please report it respons
 - Secrets never committed to git (enforced via .gitignore)
 - Database passwords auto-generated with 32+ character entropy
 - HTTPS enforced for production deployments
+- Reports and results exported via bind mounts (no network transfer needed)
 
 ### Input Validation
 - All MCP tool call parameters are validated with Pydantic
-- No `shell=True` in any subprocess calls
+- No `shell=True` in any subprocess calls (enforced project-wide)
 - Path traversal protection on all file operations
 - SQL injection prevention via parameterized queries (asyncpg)
+- ForensicPayload schema validation for all aggregated results
 
 ### Chain of Custody
 - Immutable audit log (database triggers prevent UPDATE/DELETE)
 - Every evidence access, tool invocation, and report generation is logged
 - Forensic hashes (SHA256/MD5/SHA1) computed on all evidence
+- Chain of custody tracked in both database and ForensicPayload data contract
 
 ### CI/CD Security
 - Trivy vulnerability scanning on all Docker images
-- Bandit static analysis on all Python code
+- Bandit static analysis on all Python code (dfireballz/, orchestrator/, mcp-servers/)
 - pip-audit dependency vulnerability scanning on every CI run
 - CodeQL analysis on every PR to main
 - Dependabot for automated dependency updates
 - Docker Compose configuration validation (all profiles)
 - Container smoke tests (`make test-smoke`) for runtime verification
+- Multi-Python version testing (3.11, 3.12, 3.13) for compatibility assurance

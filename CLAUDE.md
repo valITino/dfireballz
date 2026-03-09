@@ -36,14 +36,49 @@ DFIReballz is a digital forensics and cybercrime investigation platform. All cod
 should reflect the context of a professional forensic investigator.
 
 ## Development Commands
-- `make dev` — Start development environment
-- `make test` — Run all tests
-- `make test-security` — Security scan
+
+### Core
+- `make start` / `make up` — Start all services
+- `make stop` / `make down` — Stop all services
+- `make dev` — Start development environment (hot-reload)
+- `make status` / `make ps` — Show container health status
+
+### Python Package (`dfireballz/`)
+- `make venv` — Create Python venv and install package
+- `make install-dev` — Install dfireballz with dev dependencies
+- `make test-pkg` — Run dfireballz package tests
+- `make lint` — Run ruff linter on dfireballz/ and tests/
+- `make format` — Auto-format code with ruff
+- `make typecheck` — Run mypy type checking
+- `make audit` — Run pip-audit on dependencies
+- `make version` — Show dfireballz package version
+
+### Testing & Security
+- `make test` — Run all tests (package + orchestrator)
+- `make test-smoke` — Run container smoke tests
+- `make test-security` — Trivy + Bandit security scan
+
+### Container Debug
 - `make shell-kali` — Debug Kali forensics container
 - `make shell-osint` — Debug OSINT container
-- `make shell-netforensics` — Debug Wireshark/tcpdump container
+- `make shell-netforensics` — Debug network forensics container
+- `make shell-winforensics` — Debug Windows forensics container
+- `make shell-binary` — Debug binary analysis container
+- `make shell-threat` — Debug threat-intel container
+- `make shell-filesystem` — Debug filesystem container
+- `make shell-orchestrator` — Debug orchestrator container
+
+### Per-Service Operations
+- `make log-<service>` — Tail logs (kali, osint, netforensics, winforensics, binary, threat, filesystem, orchestrator, ui, db, redis)
+- `make restart-<service>` — Restart a specific service
+
+### Utilities
+- `make health` — Check MCP server container health
 - `make configure-mcp` — Regenerate `.mcp.json` / `~/.mcphost.yml` for your AI host
 - `make start-openwebui` — Start with Open WebUI + Ollama (`--profile openwebui`)
+- `make report` — Generate report from last session
+- `make clean` — Remove containers and local images
+- `make nuke` — Remove EVERYTHING (containers, volumes, images)
 
 ## Architecture
 - **MCP Transport: stdio only.** Every MCP server runs `mcp.run(transport="stdio")`.
@@ -80,9 +115,10 @@ should reflect the context of a professional forensic investigator.
 2. Write Dockerfile (non-root user, health check required)
 3. Write `server.py` using FastMCP
 4. Register in `docker-compose.yml` and generate updated `.mcp.json` via `make configure-mcp`
-5. Add service to `docker-compose.yml`
-6. Document tools in README.md MCP reference table
-7. Add unit tests
+5. Register in `dfireballz/backends/docker.py` `_TOOL_COMMANDS` mapping
+6. Add tools to `dfireballz/data/tools_catalog.json`
+7. Document tools in README.md MCP reference table
+8. Add unit tests
 
 ## Key Reference Links
 | Resource | URL |

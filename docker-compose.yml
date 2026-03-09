@@ -239,6 +239,7 @@ services:
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
+      - ./results:/results
       - ./CLAUDE.md:/workspace/CLAUDE.md:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Persist Claude Code auth/config across container restarts
