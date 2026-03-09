@@ -110,8 +110,8 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(case_id))
-            query = (  # nosec B608 — keys validated against _CASE_COLUMNS whitelist
-                f"UPDATE cases SET {', '.join(set_clauses)} "
+            query = (
+                f"UPDATE cases SET {', '.join(set_clauses)} "  # nosec B608
                 f"WHERE id = ${len(params)} RETURNING *"
             )
             row = await conn.fetchrow(query, *params)
@@ -272,8 +272,8 @@ class CaseManager:
                 set_clauses.append(f"{key} = ${idx}")
                 params.append(value)
             params.append(uuid.UUID(run_id))
-            query = (  # nosec B608 — keys validated against _RUN_COLUMNS whitelist
-                f"UPDATE playbook_runs SET {', '.join(set_clauses)} "
+            query = (
+                f"UPDATE playbook_runs SET {', '.join(set_clauses)} "  # nosec B608
                 f"WHERE id = ${len(params)} RETURNING *"
             )
             row = await conn.fetchrow(query, *params)
