@@ -117,9 +117,12 @@ start up:
 	docker compose pull --ignore-pull-failures
 	docker compose up -d --no-build
 	@echo ""
+	@echo "  Waiting for containers to become healthy..."
+	@bash scripts/configure_mcp.sh --host "$$(grep '^MCP_HOST=' .env 2>/dev/null | cut -d= -f2 || echo claude-code)" 2>/dev/null || true
+	@echo ""
 	@echo "  DFIReballz running at http://localhost:3000"
 	@echo "  Orchestrator API: http://localhost:8800"
-	@echo "  Run 'make configure-mcp' to generate .mcp.json for Claude Code / Claude Desktop"
+	@echo "  MCP config auto-generated — no need to run 'make configure-mcp' separately"
 
 start-openwebui:
 	docker compose --profile openwebui pull --ignore-pull-failures

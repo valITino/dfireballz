@@ -130,6 +130,20 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 - **Disk:** 50 GB+ recommended (Docker images are large)
 - **Optional:** NVIDIA GPU + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for GPU-accelerated inference with Ollama
 
+### Required Accounts (Free Tiers Available)
+
+The threat intelligence tools require API keys. **Create accounts before running setup** so you have your keys ready:
+
+| Service | What It Does | Free Tier | Sign Up |
+|---------|-------------|-----------|---------|
+| **VirusTotal** | File/hash/URL reputation lookups | 4 req/min | [virustotal.com/gui/my-apikey](https://www.virustotal.com/gui/my-apikey) |
+| **Shodan** | Internet-connected device search | Limited queries | [account.shodan.io](https://account.shodan.io/) |
+| **AbuseIPDB** | IP address reputation checks | 1,000 req/day | [abuseipdb.com/account/api](https://www.abuseipdb.com/account/api) |
+| **URLScan.io** | URL scanning and analysis | 50 scans/day | [urlscan.io/user/signup](https://urlscan.io/user/signup) |
+| **VulnCheck** | Vulnerability intelligence | Free tier | [vulncheck.com](https://vulncheck.com/) |
+
+> **Using Claude Code in Docker?** You also need an **Anthropic API key**: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+
 ```bash
 # Verify prerequisites
 bash scripts/check-requirements.sh
@@ -146,12 +160,19 @@ All images are pre-built and published on [Docker Hub](https://hub.docker.com/r/
 git clone https://github.com/valITino/dfireballz.git
 cd dfireballz
 
-# 2. Run interactive setup (generates .env, configures API keys)
+# 2. Run interactive setup (generates .env, pulls images, configures MCP — all in one)
 make setup
 
-# 3. Pull pre-built images from Docker Hub and start all services (11 containers)
+# 3. Start all services (11 containers)
 make start
 ```
+
+That's it. The setup wizard will:
+1. Generate `.env` with secure random secrets
+2. Ask you to choose your AI host (Claude Code, Claude Desktop, MCPHost, or Open WebUI)
+3. Collect your API keys (VirusTotal, Shodan, AbuseIPDB, URLScan.io)
+4. Pull all pre-built Docker images from Docker Hub
+5. Auto-generate the MCP configuration for your chosen host
 
 > **Want to build from source instead?** Run `make build` before `make start`.
 > This is only needed if you've modified Dockerfiles or server code locally.
@@ -167,7 +188,10 @@ You should see 11 containers running:
 - 7 MCP servers (kali-forensics, winforensics, osint, threat-intel, binary-analysis, network-forensics, filesystem)
 - 4 infrastructure services (orchestrator, ui, db, redis)
 
-**Dashboard:** http://localhost:3000 | **API:** http://localhost:8800
+**Dashboard:** http://localhost:3000 (case management, evidence, reports) | **API:** http://localhost:8800
+
+> **Important:** The UI dashboard is for case management, evidence handling, and viewing reports.
+> The actual AI chat happens in your chosen MCP host (Claude Code, Claude Desktop, etc.) — not in the browser UI.
 
 ---
 
@@ -233,14 +257,13 @@ If you already have Claude Code installed on your host machine:
 ### Step 1: Start the stack
 
 ```bash
-make setup
-make start
-make configure-mcp    # Generates .mcp.json
+make setup      # Setup wizard — generates .env, pulls images, auto-generates .mcp.json
+make start      # Start all containers (also regenerates .mcp.json)
 ```
 
 ### Step 2: Open Claude Code
 
-Open Claude Code in the DFIReballz directory. All MCP tools are auto-discovered from `.mcp.json`. The SessionStart hook (`.claude/hooks/session-start.sh`) automatically verifies Docker stack health.
+Open Claude Code in the DFIReballz directory. All MCP tools are auto-discovered from `.mcp.json` (generated automatically during setup). The SessionStart hook (`.claude/hooks/session-start.sh`) automatically verifies Docker stack health.
 
 ### Step 3: Investigate
 
@@ -256,10 +279,11 @@ Open Claude Code in the DFIReballz directory. All MCP tools are auto-discovered 
 ### Step 1: Start the stack
 
 ```bash
-make setup
+make setup      # Select "Claude Desktop" when prompted for MCP host
 make start
-make configure-mcp MCP_HOST=claude-desktop
 ```
+
+> If you already ran setup with a different host, regenerate: `make configure-mcp MCP_HOST=claude-desktop`
 
 ### Step 2: Configure Claude Desktop
 
@@ -292,13 +316,14 @@ go install github.com/mark3labs/mcphost@latest
 ollama pull qwen3:8b
 ```
 
-### Step 3: Start DFIReballz and configure
+### Step 3: Start DFIReballz
 
 ```bash
-make setup
+make setup      # Select "MCPHost + Ollama" when prompted for MCP host
 make start
-make configure-mcp MCP_HOST=mcphost
 ```
+
+> If you already ran setup with a different host, regenerate: `make configure-mcp MCP_HOST=mcphost`
 
 ### Step 4: Launch MCPHost
 
@@ -434,15 +459,18 @@ Reports are organized by date: `reports/reports-DDMMYYYY/report-<case-id>-DDMMYY
 
 ## API Keys Setup
 
-| Service | Free Tier | Get Key |
-|---------|-----------|---------|
-| VirusTotal | 4 req/min | https://www.virustotal.com/gui/my-apikey |
-| Shodan | Limited queries | https://account.shodan.io/ |
-| AbuseIPDB | 1000 req/day | https://www.abuseipdb.com/account/api |
-| URLScan.io | 50 scans/day | https://urlscan.io/user/signup |
-| VulnCheck | Free tier | https://vulncheck.com/ |
+API keys are entered during `make setup` and stored in `.env`. They are injected into MCP server containers as environment variables. You can also view and update them from the UI Settings page (http://localhost:3000/settings).
 
-API keys are stored encrypted in PostgreSQL (pgcrypto). Set them during `make setup` or in the UI Settings page.
+| Service | Used By | Free Tier | Get Key |
+|---------|---------|-----------|---------|
+| VirusTotal | threat-intel | 4 req/min | [virustotal.com/gui/my-apikey](https://www.virustotal.com/gui/my-apikey) |
+| Shodan | threat-intel | Limited queries | [account.shodan.io](https://account.shodan.io/) |
+| AbuseIPDB | threat-intel | 1,000 req/day | [abuseipdb.com/account/api](https://www.abuseipdb.com/account/api) |
+| URLScan.io | threat-intel | 50 scans/day | [urlscan.io/user/signup](https://urlscan.io/user/signup) |
+| VulnCheck | threat-intel | Free tier | [vulncheck.com](https://vulncheck.com/) |
+| Anthropic | claude-code container | Pay-per-use | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+
+> **Note:** The Anthropic API key is only needed if you use `make claude-code` (containerized Claude Code). If you use host-installed Claude Code or Claude Desktop, authentication is handled by those apps directly.
 
 ---
 

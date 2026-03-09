@@ -122,7 +122,13 @@ echo "  MCP Host set to: ${MCP_HOST}"
 echo ""
 
 # API Keys (optional)
-echo "[5/6] API Keys (optional — press Enter to skip)"
+echo "[5/7] API Keys (optional — press Enter to skip)"
+echo ""
+echo "  These services require free accounts. Sign up first if you haven't:"
+echo "    VirusTotal  — https://www.virustotal.com/gui/my-apikey"
+echo "    Shodan      — https://account.shodan.io/"
+echo "    AbuseIPDB   — https://www.abuseipdb.com/account/api"
+echo "    URLScan.io  — https://urlscan.io/user/signup"
 echo ""
 
 read -rp "  VirusTotal API Key: " VT_KEY
@@ -145,23 +151,48 @@ if [ -n "$URLSCAN_KEY" ]; then
     sed -i "s|URLSCAN_API_KEY=|URLSCAN_API_KEY=${URLSCAN_KEY}|" .env
 fi
 
+# Anthropic API key (needed for Claude Code Docker container)
+echo ""
+echo "  If you plan to use Claude Code in Docker (make claude-code),"
+echo "  you need an Anthropic API key:"
+echo "    https://console.anthropic.com/settings/keys"
+echo ""
+read -rp "  Anthropic API Key (for Claude Code container, optional): " ANTHROPIC_KEY
+if [ -n "$ANTHROPIC_KEY" ]; then
+    # Append to .env if not present, or update existing
+    if grep -q '^ANTHROPIC_API_KEY=' .env; then
+        sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
+    else
+        echo "" >> .env
+        echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
+        echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> .env
+    fi
+fi
+
 echo ""
 
-# Build
-echo "[6/6] Building Docker images..."
-echo "  This may take several minutes on first run."
+# Pull images
+echo "[6/7] Pulling pre-built Docker images from Docker Hub..."
+echo "  Images are published at docker.io/crhacky/dfireballz"
 echo ""
 
-docker compose build --parallel
+docker compose pull --ignore-pull-failures
+
+echo ""
+
+# Generate MCP configuration
+echo "[7/7] Generating MCP configuration for ${MCP_HOST}..."
+bash scripts/configure_mcp.sh --host "${MCP_HOST}"
 
 echo ""
 echo "══════════════════════════════════════════════"
 echo "  Setup complete!"
 echo ""
-echo "  Next steps:"
-echo "    make start              — Start DFIReballz"
-echo "    make configure-mcp      — Generate MCP config for ${MCP_HOST}"
+echo "  Next step — just run:"
+echo "    make start              — Pull & start DFIReballz"
 echo ""
 echo "  Dashboard: http://localhost:3000"
 echo "  API:       http://localhost:8800"
+echo ""
+echo "  Your MCP config for ${MCP_HOST} has been generated automatically."
 echo "══════════════════════════════════════════════"
