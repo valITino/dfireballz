@@ -14,7 +14,7 @@ from dfireballz.models.base import ForensicSession
 from dfireballz.reporting.paths import get_report_path
 
 if TYPE_CHECKING:
-    from dfireballz.models.forensic_payload import ForensicPayload
+    pass
 
 logger = logging.getLogger("dfireballz.reporting.html_generator")
 

@@ -58,7 +58,8 @@ _TOOLS: list[Tool] = [
             "properties": {
                 "category": {
                     "type": "string",
-                    "description": "Tool category: memory, disk, network, malware, windows, osint, threat_intel",
+                    "description": "Tool category: memory, disk, network, "
+                    "malware, windows, osint, threat_intel",
                 },
                 "tool": {
                     "type": "string",

@@ -218,9 +218,16 @@ def generate_md_report_from_payload(
         lines.append("| Timestamp | Type | Source | Description |")
         lines.append("|-----------|------|--------|-------------|")
         for evt in payload.findings.timeline_events[:50]:
-            lines.append(f"| {evt.timestamp} | {evt.event_type} | {evt.source} | {evt.description} |")
+            ts = evt.timestamp
+            lines.append(
+                f"| {ts} | {evt.event_type} | {evt.source} "
+                f"| {evt.description} |"
+            )
         if len(payload.findings.timeline_events) > 50:
-            lines.append(f"| ... | ... | ... | *{len(payload.findings.timeline_events) - 50} more events* |")
+            remaining = len(payload.findings.timeline_events) - 50
+            lines.append(
+                f"| ... | ... | ... | *{remaining} more events* |"
+            )
         lines.append("")
 
     # Chain of Custody
@@ -230,7 +237,10 @@ def generate_md_report_from_payload(
         lines.append("| Timestamp | Action | Evidence | Description |")
         lines.append("|-----------|--------|----------|-------------|")
         for coc in payload.chain_of_custody:
-            lines.append(f"| {coc.timestamp} | {coc.action} | {coc.evidence_id} | {coc.description} |")
+            lines.append(
+                f"| {coc.timestamp} | {coc.action} "
+                f"| {coc.evidence_id} | {coc.description} |"
+            )
         lines.append("")
 
     # Recommendations

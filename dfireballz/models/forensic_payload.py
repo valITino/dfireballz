@@ -27,7 +27,8 @@ class ArtifactEntry(BaseModel):
     id: str = ""
     artifact_type: str = Field(
         default="file",
-        description="Type: file, registry_key, mft_entry, event_log, prefetch, shellbag, usn_journal",
+        description="Type: file, registry_key, mft_entry, "
+        "event_log, prefetch, shellbag, usn_journal",
     )
     path: str = ""
     description: str = ""

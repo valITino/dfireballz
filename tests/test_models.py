@@ -54,3 +54,48 @@ def test_evidence_defaults():
     e = Evidence(filename="disk.img", sha256="abc123")
     assert e.evidence_type == "unknown"
     assert e.id
+
+
+def test_session_duration_before_finish():
+    """duration_seconds should be None if session hasn't finished."""
+    session = ForensicSession(target=Target(value="test.raw"))
+    assert session.duration_seconds is None
+
+
+def test_session_severity_counts_empty():
+    """severity_counts should return zeros when no findings exist."""
+    session = ForensicSession(target=Target(value="test.raw"))
+    counts = session.severity_counts
+    assert counts.get("critical", 0) == 0
+    assert counts.get("high", 0) == 0
+
+
+def test_session_case_id():
+    """Session should accept and store a case_id."""
+    session = ForensicSession(
+        target=Target(value="test.raw"),
+        case_id="CASE-2026-042",
+    )
+    assert session.case_id == "CASE-2026-042"
+
+
+def test_finding_unique_ids():
+    """Each Finding should get a unique ID."""
+    f1 = Finding(target="t", tool="a", title="one")
+    f2 = Finding(target="t", tool="a", title="two")
+    assert f1.id != f2.id
+
+
+def test_finding_with_all_fields():
+    """Finding should accept all optional fields."""
+    f = Finding(
+        target="host",
+        tool="capa",
+        title="MITRE ATT&CK match",
+        severity=Severity.CRITICAL,
+        description="Detected T1059.001 command-line execution",
+        evidence="capa output: ...",
+        recommendation="Investigate process tree",
+    )
+    assert f.severity == Severity.CRITICAL
+    assert f.recommendation == "Investigate process tree"

@@ -65,5 +65,17 @@ class Settings(BaseSettings):
     )
 
 
-# Singleton instance
-settings = Settings()
+# Singleton instance — use get_settings() for testability
+_settings: Settings | None = None
+
+
+def get_settings() -> Settings:
+    """Return the singleton Settings instance."""
+    global _settings
+    if _settings is None:
+        _settings = Settings()
+    return _settings
+
+
+# Module-level convenience alias
+settings = get_settings()

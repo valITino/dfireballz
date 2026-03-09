@@ -20,7 +20,10 @@ _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
     },
     "bulk_extractor": {
         "container": "dfireballz-kali-forensics-1",
-        "build": lambda p: ["bulk_extractor", "-o", p.get("output", "/tmp/be_out"), p.get("image", "")],
+        "build": lambda p: [
+            "bulk_extractor", "-o", p.get("output", "/tmp/be_out"),
+            p.get("image", ""),
+        ],
     },
     "yara": {
         "container": "dfireballz-kali-forensics-1",
@@ -32,7 +35,10 @@ _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
     },
     "foremost": {
         "container": "dfireballz-kali-forensics-1",
-        "build": lambda p: ["foremost", "-i", p.get("image", ""), "-o", p.get("output", "/tmp/foremost_out")],
+        "build": lambda p: [
+            "foremost", "-i", p.get("image", ""),
+            "-o", p.get("output", "/tmp/foremost_out"),
+        ],
     },
     "sleuthkit": {
         "container": "dfireballz-kali-forensics-1",
@@ -58,7 +64,10 @@ _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
     },
     "theharvester": {
         "container": "dfireballz-osint-1",
-        "build": lambda p: ["theHarvester", "-d", p.get("domain", ""), "-b", p.get("source", "all")],
+        "build": lambda p: [
+            "theHarvester", "-d", p.get("domain", ""),
+            "-b", p.get("source", "all"),
+        ],
     },
     # Binary analysis container
     "capa": {
@@ -160,5 +169,9 @@ class DockerBackend(ToolBackend):
     async def list_tools(self) -> list[dict[str, str]]:
         available: list[dict[str, str]] = []
         for tool_name, spec in _TOOL_COMMANDS.items():
-            available.append({"category": "forensics", "tool": tool_name, "container": spec["container"]})
+            available.append({
+                "category": "forensics",
+                "tool": tool_name,
+                "container": spec["container"],
+            })
         return available

@@ -96,7 +96,7 @@ def catalog() -> None:
     "--params",
     "-p",
     required=True,
-    help='JSON string of tool parameters, e.g. \'{"image":"/evidence/memdump.raw","plugin":"windows.pslist"}\'.',
+    help="JSON string of tool parameters.",
 )
 def run_tool(category: str, tool: str, params: str) -> None:
     """Run a single forensic tool via the docker exec backend."""

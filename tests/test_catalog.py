@@ -44,8 +44,7 @@ def test_resolve_category():
 
 def test_resolve_unknown_raises():
     catalog = load_tools_catalog()
-    try:
+    import pytest
+
+    with pytest.raises(ValueError):
         resolve_tool_names(catalog, ["nonexistent_tool"])
-        assert False, "Should have raised ValueError"
-    except ValueError:
-        pass
