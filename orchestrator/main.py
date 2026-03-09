@@ -211,6 +211,70 @@ async def generate_report(case_id: UUID, format: str = "markdown"):
 
 # ─── Settings ────────────────────────────────────────────────────────
 
+# API keys that can be configured via the UI.
+# Maps UI key name → environment variable name.
+_API_KEY_ENV_MAP: dict[str, str] = {
+    "virustotal": "VIRUSTOTAL_API_KEY",
+    "shodan": "SHODAN_API_KEY",
+    "abuseipdb": "ABUSEIPDB_API_KEY",
+    "urlscan": "URLSCAN_API_KEY",
+    "vulncheck": "VULNCHECK_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+}
+
+
+def _mask_key(key: str) -> str:
+    """Mask an API key for safe display: show first 4 and last 4 chars."""
+    if not key or len(key) < 10:
+        return "••••••••" if key else ""
+    return f"{key[:4]}{'•' * (len(key) - 8)}{key[-4:]}"
+
+
+class SettingsUpdate(BaseModel):
+    mcp_host: str | None = None
+    api_keys: dict[str, str] | None = None
+
+
+@app.get("/settings")
+async def get_settings():
+    """Return current settings including which API keys are configured."""
+    api_keys_status: dict[str, dict[str, str | bool]] = {}
+    for ui_name, env_var in _API_KEY_ENV_MAP.items():
+        raw = os.environ.get(env_var, "")
+        api_keys_status[ui_name] = {
+            "configured": bool(raw),
+            "masked_value": _mask_key(raw) if raw else "",
+            "env_var": env_var,
+        }
+
+    return {
+        "mcp_host": os.environ.get("MCP_HOST", "claude-code"),
+        "api_keys": api_keys_status,
+    }
+
+
+@app.post("/settings")
+async def update_settings(settings: SettingsUpdate):
+    """Update API keys in the running environment.
+
+    Note: This updates the current process environment. To persist across
+    restarts, users should also update their .env file or re-run make setup.
+    """
+    updated_keys: list[str] = []
+
+    if settings.api_keys:
+        for ui_name, value in settings.api_keys.items():
+            env_var = _API_KEY_ENV_MAP.get(ui_name)
+            if env_var and value:
+                os.environ[env_var] = value
+                updated_keys.append(ui_name)
+
+    return {
+        "status": "ok",
+        "updated_keys": updated_keys,
+        "note": "Keys updated in running environment. Update .env to persist across restarts.",
+    }
+
 
 @app.get("/settings/mcp-status")
 async def mcp_status():

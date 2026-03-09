@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
   BookOpen,
   Play,
@@ -14,8 +15,10 @@ import {
   Lock,
   Loader2,
   CheckCircle,
+  AlertTriangle,
+  FolderOpen,
 } from 'lucide-react';
-import { cn, type Playbook, type CaseSeverity } from '../lib/utils';
+import { API_BASE, cn, type Playbook, type CaseSeverity } from '../lib/utils';
 
 const severityBadge: Record<CaseSeverity, string> = {
   critical: 'badge-severity-critical',
@@ -34,6 +37,13 @@ const categoryIcons: Record<string, React.ElementType> = {
   log_analysis: Activity,
   incident_response: Lock,
 };
+
+interface CaseOption {
+  id: string;
+  case_number: string;
+  title: string;
+  evidence_count: number;
+}
 
 const playbooks: Playbook[] = [
   {
@@ -122,19 +132,67 @@ export default function Playbooks() {
   const [launching, setLaunching] = useState<string | null>(null);
   const [launched, setLaunched] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState<string>('all');
+  const [selectedCase, setSelectedCase] = useState<string>('');
+  const [cases, setCases] = useState<CaseOption[]>([]);
+  const [loadingCases, setLoadingCases] = useState(true);
+  const [launchError, setLaunchError] = useState<string | null>(null);
 
   const categories = ['all', ...new Set(playbooks.map((p) => p.category))];
 
   const filtered =
     filter === 'all' ? playbooks : playbooks.filter((p) => p.category === filter);
 
-  const handleLaunch = async (id: string) => {
-    setLaunching(id);
-    // Simulate launch - in production this would call the API
-    setTimeout(() => {
-      setLaunching(null);
-      setLaunched((prev) => new Set(prev).add(id));
-    }, 2000);
+  // Load cases on mount
+  useEffect(() => {
+    loadCases();
+  }, []);
+
+  const loadCases = async () => {
+    setLoadingCases(true);
+    try {
+      const res = await axios.get(`${API_BASE}/cases`, { timeout: 5000 });
+      const caseList = (Array.isArray(res.data) ? res.data : []).map(
+        (c: { id: string; case_number?: string; title: string; evidence_count?: number }) => ({
+          id: c.id,
+          case_number: c.case_number || c.id.slice(0, 8),
+          title: c.title,
+          evidence_count: c.evidence_count ?? 0,
+        })
+      );
+      setCases(caseList);
+    } catch {
+      setCases([]);
+    }
+    setLoadingCases(false);
+  };
+
+  const handleLaunch = async (playbookId: string) => {
+    if (!selectedCase) {
+      setLaunchError('Select a case before launching a playbook.');
+      setTimeout(() => setLaunchError(null), 4000);
+      return;
+    }
+
+    const selected = cases.find((c) => c.id === selectedCase);
+    if (selected && selected.evidence_count === 0) {
+      setLaunchError('The selected case has no evidence. Upload evidence first.');
+      setTimeout(() => setLaunchError(null), 4000);
+      return;
+    }
+
+    setLaunching(playbookId);
+    setLaunchError(null);
+    try {
+      const pb = playbooks.find((p) => p.id === playbookId);
+      await axios.post(`${API_BASE}/cases/${selectedCase}/playbooks/run`, {
+        playbook_name: pb?.name || playbookId,
+      });
+      setLaunched((prev) => new Set(prev).add(playbookId));
+    } catch {
+      setLaunchError('Failed to launch playbook. Check that the orchestrator and MCP servers are healthy.');
+      setTimeout(() => setLaunchError(null), 5000);
+    }
+    setLaunching(null);
   };
 
   return (
@@ -148,6 +206,52 @@ export default function Playbooks() {
           Automated forensic analysis workflows powered by MCP tools
         </p>
       </div>
+
+      {/* Case Selector */}
+      <div className="card-forensic">
+        <div className="flex items-center gap-2 mb-2">
+          <FolderOpen className="w-4 h-4 text-accent" />
+          <h3 className="text-sm font-semibold text-text-primary">Target Case</h3>
+        </div>
+        <p className="text-xs text-text-muted mb-3">
+          Select the case to run playbooks against. The case must have evidence uploaded.
+        </p>
+        {loadingCases ? (
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading cases...
+          </div>
+        ) : cases.length === 0 ? (
+          <div className="flex items-center gap-2 text-warning text-sm">
+            <AlertTriangle className="w-4 h-4" />
+            No cases found. Create a case and upload evidence first.
+          </div>
+        ) : (
+          <select
+            value={selectedCase}
+            onChange={(e) => {
+              setSelectedCase(e.target.value);
+              setLaunchError(null);
+            }}
+            className="input-field w-full text-sm"
+          >
+            <option value="">-- Select a case --</option>
+            {cases.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.case_number} — {c.title} ({c.evidence_count} evidence item{c.evidence_count !== 1 ? 's' : ''})
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      {/* Error Banner */}
+      {launchError && (
+        <div className="flex items-center gap-2 px-4 py-3 rounded-md bg-critical/10 border border-critical/30 text-critical text-sm">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          {launchError}
+        </div>
+      )}
 
       {/* Category filter */}
       <div className="flex gap-2 flex-wrap">
@@ -173,6 +277,7 @@ export default function Playbooks() {
           const Icon = categoryIcons[pb.category] || Search;
           const isLaunching = launching === pb.id;
           const isLaunched = launched.has(pb.id);
+          const canLaunch = !!selectedCase;
 
           return (
             <div key={pb.id} className="card-forensic flex flex-col">
@@ -222,10 +327,13 @@ export default function Playbooks() {
                 </div>
                 <button
                   onClick={() => handleLaunch(pb.id)}
-                  disabled={isLaunching}
+                  disabled={isLaunching || !canLaunch}
+                  title={!canLaunch ? 'Select a case first' : undefined}
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-                    isLaunched
+                    !canLaunch
+                      ? 'bg-surface-hover text-text-muted cursor-not-allowed opacity-60'
+                      : isLaunched
                       ? 'bg-success/15 text-success'
                       : isLaunching
                       ? 'bg-accent/15 text-accent'

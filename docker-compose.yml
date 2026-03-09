@@ -2,6 +2,7 @@ services:
   # ─── Core MCP Servers (always start) ─────────────────────────────
 
   kali-forensics:
+    image: crhacky/dfireballz:kali-forensics
     build: ./mcp-servers/kali-forensics
     container_name: dfireballz-kali-forensics-1
     security_opt:
@@ -18,6 +19,7 @@ services:
     restart: unless-stopped
 
   winforensics:
+    image: crhacky/dfireballz:winforensics
     build: ./mcp-servers/winforensics
     container_name: dfireballz-winforensics-1
     security_opt:
@@ -34,6 +36,7 @@ services:
     restart: unless-stopped
 
   osint:
+    image: crhacky/dfireballz:osint
     build: ./mcp-servers/osint
     container_name: dfireballz-osint-1
     security_opt:
@@ -52,6 +55,7 @@ services:
     restart: unless-stopped
 
   threat-intel:
+    image: crhacky/dfireballz:threat-intel
     build: ./mcp-servers/threat-intel
     container_name: dfireballz-threat-intel-1
     security_opt:
@@ -73,6 +77,7 @@ services:
     restart: unless-stopped
 
   binary-analysis:
+    image: crhacky/dfireballz:binary-analysis
     build: ./mcp-servers/binary-analysis
     container_name: dfireballz-binary-analysis-1
     security_opt:
@@ -88,6 +93,7 @@ services:
     restart: unless-stopped
 
   network-forensics:
+    image: crhacky/dfireballz:network-forensics
     build: ./mcp-servers/network-forensics
     container_name: dfireballz-network-forensics-1
     security_opt:
@@ -107,6 +113,7 @@ services:
     restart: unless-stopped
 
   filesystem:
+    image: crhacky/dfireballz:filesystem
     build: ./mcp-servers/filesystem
     container_name: dfireballz-filesystem-1
     security_opt:
@@ -125,6 +132,7 @@ services:
   # ─── Core Infrastructure (always start) ──────────────────────────
 
   db:
+    image: crhacky/dfireballz:db
     build: ./database
     container_name: dfireballz-db-1
     security_opt:
@@ -155,6 +163,7 @@ services:
     restart: unless-stopped
 
   orchestrator:
+    image: crhacky/dfireballz:orchestrator
     build: ./orchestrator
     container_name: dfireballz-orchestrator-1
     security_opt:
@@ -188,6 +197,7 @@ services:
     restart: unless-stopped
 
   ui:
+    image: crhacky/dfireballz:ui
     build: ./ui
     container_name: dfireballz-ui-1
     security_opt:
@@ -204,6 +214,7 @@ services:
   # ─── Claude Code Container (--profile claude-code) ──────────────
 
   claude-code:
+    image: crhacky/dfireballz:claude-code
     build:
       context: .
       dockerfile: docker/claude-code.Dockerfile
