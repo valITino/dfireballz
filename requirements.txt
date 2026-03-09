@@ -1,0 +1,13 @@
+# Core dependencies — keep in sync with pyproject.toml
+# This file exists for pip-audit compatibility in CI.
+click==8.1.8
+httpx==0.28.1
+pydantic>=2.11.0
+pydantic-settings>=2.10.1
+rich==13.9.4
+weasyprint==68.1
+jinja2==3.1.6
+mcp>=1.23.0
+tenacity==9.0.0
+python-dotenv==1.0.1
+aiofiles==24.1.0

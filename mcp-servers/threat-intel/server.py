@@ -1,4 +1,7 @@
-"""Threat Intelligence MCP Server — VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan."""
+"""Threat Intelligence MCP Server.
+
+VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan.
+"""
 
 import os
 
@@ -15,7 +18,10 @@ def _get_key(service: str) -> str:
     """Get API key from environment."""
     key = os.environ.get(f"{service.upper()}_API_KEY", "")
     if not key:
-        raise ValueError(f"{service} API key not configured. Set {service.upper()}_API_KEY environment variable.")
+        raise ValueError(
+            f"{service} API key not configured. "
+            f"Set {service.upper()}_API_KEY environment variable."
+        )
     return key
 
 

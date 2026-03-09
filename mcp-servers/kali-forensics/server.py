@@ -5,13 +5,15 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from fastmcp import FastMCP
 
 mcp = FastMCP(
     "kali-forensics",
-    description="Kali Linux forensics: Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool",
+    description=(
+        "Kali Linux forensics: Volatility3, bulk_extractor, tshark, "
+        "YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
+    ),
 )
 
 EVIDENCE_DIR = Path("/evidence")
@@ -51,7 +53,7 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
 
 
 @mcp.tool()
-def volatility_run(image_path: str, plugin: str, args: Optional[str] = None) -> dict:
+def volatility_run(image_path: str, plugin: str, args: str | None = None) -> dict:
     """Run a Volatility3 plugin against a memory image.
 
     Args:
@@ -67,7 +69,7 @@ def volatility_run(image_path: str, plugin: str, args: Optional[str] = None) -> 
 
 
 @mcp.tool()
-def tshark_analyze(pcap_path: str, filter: Optional[str] = None, output_format: str = "json") -> dict:
+def tshark_analyze(pcap_path: str, filter: str | None = None, output_format: str = "json") -> dict:
     """Analyze PCAP file with tshark display filters.
 
     Args:
@@ -104,7 +106,7 @@ def bulk_extract(image_path: str, output_dir: str) -> dict:
 
 
 @mcp.tool()
-def foremost_recover(image_path: str, types: Optional[str] = None) -> dict:
+def foremost_recover(image_path: str, types: str | None = None) -> dict:
     """Recover/carve files from a disk image using foremost.
 
     Args:
@@ -191,7 +193,7 @@ def dc3dd_hash(file_path: str, algorithm: str = "sha256") -> dict:
 
 
 @mcp.tool()
-def sleuthkit_analyze(image_path: str, command: str, args: Optional[str] = None) -> dict:
+def sleuthkit_analyze(image_path: str, command: str, args: str | None = None) -> dict:
     """Run Sleuthkit (TSK) commands for disk forensics.
 
     Args:

@@ -70,11 +70,44 @@ This is **not** a pentesting tool. It is a professional forensic platform design
 
 ---
 
+## The `dfireballz` Python Package
+
+DFIReballz v2.0 includes a unified Python package (`dfireballz/`) that provides:
+
+- **CLI** — `dfireballz` command with subcommands: `version`, `catalog`, `run-tool`, `report`, `templates`, `mcp`
+- **MCP Server** — 8 tools exposed via stdio transport for AI host integration
+- **ForensicPayload** — Pydantic data contract for structured forensic findings (artifacts, IoCs, timeline, chain of custody)
+- **Docker Backend** — Executes forensic tools inside MCP containers via `docker exec`
+- **Report Generation** — HTML/PDF/Markdown reports with DFIReballz branding
+- **Investigation Templates** — 9 pre-built forensic workflow templates
+- **Tool Catalog** — 33 forensic tools across 7 categories
+
+### Install Locally
+
+```bash
+# From the repo root
+pip install -e ".[dev]"    # Editable install with dev deps
+dfireballz version         # Verify installation
+dfireballz catalog         # List all 33 forensic tools
+dfireballz templates list  # List investigation templates
+```
+
+### MCP Server (for AI hosts)
+
+```bash
+dfireballz mcp             # Start MCP server (stdio transport)
+```
+
+The `.mcp.json` file at the repo root configures Claude Code to automatically connect.
+
+---
+
 ## Prerequisites
 
 - **Docker** 25+ with Docker Compose v2
 - **RAM:** 16GB minimum (8GB absolute minimum, limited functionality)
 - **Disk:** 50GB+ recommended (Docker images are large)
+- **Python:** 3.11+ (for local `dfireballz` CLI usage)
 - **Optional:** NVIDIA GPU + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for GPU-accelerated inference
 
 ```bash
@@ -137,6 +170,7 @@ The containerized Claude Code container includes:
 - DNS configuration for reliable Anthropic API access
 - `CLAUDE.md` mounted read-only at `/workspace` for project context
 - Evidence mounted read-only for chain-of-custody compliance
+- Reports and results exported to host via bind mounts
 
 ### Scenario B: Claude Desktop as MCP Host
 
@@ -207,6 +241,24 @@ Verify tool calling: `ollama show <model> | grep capabilities`
 
 ---
 
+## Investigation Templates
+
+The `dfireballz` package includes 9 pre-built investigation templates:
+
+| Template | Description | Usage |
+|----------|-------------|-------|
+| `full-investigation` | Comprehensive forensic workflow across all tool categories | `dfireballz templates show full-investigation` |
+| `malware-analysis` | Static analysis, decompilation, YARA, MITRE ATT&CK mapping | `dfireballz templates show malware-analysis` |
+| `ransomware-investigation` | Ransomware artifact analysis, C2 detection, decryption assessment | `dfireballz templates show ransomware-investigation` |
+| `phishing-investigation` | Email header analysis, URL/domain investigation, infrastructure mapping | `dfireballz templates show phishing-investigation` |
+| `network-forensics` | PCAP analysis, traffic anomalies, C2 beaconing, DNS tunneling | `dfireballz templates show network-forensics` |
+| `memory-forensics` | Volatility3 memory dump analysis, process injection, rootkit detection | `dfireballz templates show memory-forensics` |
+| `incident-response` | IR triage, timeline construction, containment recommendations | `dfireballz templates show incident-response` |
+| `osint-person` | Person investigation via username/email across platforms | `dfireballz templates show osint-person` |
+| `osint-domain` | Domain/website reconnaissance and infrastructure mapping | `dfireballz templates show osint-domain` |
+
+---
+
 ## Playbooks
 
 | Playbook | Description |
@@ -237,6 +289,19 @@ Verify tool calling: `ollama show <model> | grep capabilities`
 
 ---
 
+## Report Export (Host Access)
+
+Reports generated inside containers are automatically available on the host via bind mounts:
+
+```
+./reports/     → /reports inside containers  (HTML, PDF, Markdown reports)
+./results/     → /results inside containers  (session JSON, ForensicPayload data)
+```
+
+Reports are organized by date: `reports/reports-DDMMYYYY/report-<case-id>-DDMMYYYY.<format>`
+
+---
+
 ## API Keys Setup
 
 | Service | Free Tier | Get Key |
@@ -254,12 +319,38 @@ API keys are stored encrypted in PostgreSQL (pgcrypto). Set them during `make se
 ## Development
 
 ```bash
-make dev              # Start with hot-reload
-make test             # Run unit tests
-make test-security    # Trivy + Bandit scan
-make mcp-health-check # Check MCP server container health
-make shell-kali       # Shell into Kali container
-make shell-osint      # Shell into OSINT container
+# Python package development
+make venv               # Create venv and install package
+make install-dev        # Install with dev dependencies
+make test-pkg           # Run dfireballz package tests
+make lint               # Run ruff linter
+make format             # Auto-format code
+make typecheck          # Run mypy type checking
+make audit              # Run pip-audit
+
+# Docker development
+make dev                # Start with hot-reload
+make test               # Run all tests (package + orchestrator)
+make test-smoke         # Run container smoke tests
+make test-security      # Trivy + Bandit scan
+make health             # Check MCP server container health
+make version            # Show dfireballz version
+
+# Debug containers
+make shell-kali         # Shell into Kali container
+make shell-osint        # Shell into OSINT container
+make shell-netforensics # Shell into network forensics container
+make shell-winforensics # Shell into Windows forensics container
+make shell-binary       # Shell into binary analysis container
+make shell-threat       # Shell into threat-intel container
+
+# Per-service logs and restart
+make log-<service>      # Tail logs for any service
+make restart-<service>  # Restart a specific service
+
+# Cleanup
+make clean              # Remove containers and local images
+make nuke               # Remove EVERYTHING (containers, volumes, images)
 ```
 
 ### Claude Code SessionStart Hook
@@ -268,6 +359,7 @@ When Claude Code opens this project on the host, the `.claude/hooks/session-star
 - Checks Docker daemon is running
 - Ensures `.env` and `.mcp.json` exist (creates them if missing)
 - Runs the MCP health check to verify all 7 containers are responsive
+- For remote/web sessions: creates venv, installs `dfireballz[dev]`, runs package health check
 
 The health check script supports three modes:
 ```bash
@@ -290,13 +382,15 @@ Every evidence interaction is logged in the immutable `chain_of_custody_log` tab
 
 Database triggers prevent UPDATE and DELETE on CoC records, ensuring forensic integrity.
 
+The `dfireballz` package also tracks chain of custody via the `ForensicPayload.chain_of_custody` field and the `log_chain_of_custody` MCP tool.
+
 ---
 
 ## CI/CD Pipeline
 
 | Workflow | Trigger | Actions |
 |----------|---------|---------|
-| **CI** | Push/PR to main/develop | Lint, type check, unit tests, Bandit, Docker build, Trivy scan |
+| **CI** | Push/PR to main/develop | Package lint/test (Python 3.11-3.13), orchestrator lint/test, UI build, Docker build, Trivy scan |
 | **Docker Build & Push** | Version tag (v*.*.*) | Build multi-arch, push to `crhacky/dfireballz` |
 | **CodeQL** | Push/PR to main + weekly | Static security analysis |
 | **Dependabot** | Weekly | Auto-update pip, npm, Docker, GitHub Actions dependencies |
@@ -307,7 +401,7 @@ Database triggers prevent UPDATE and DELETE on CoC records, ensuring forensic in
 
 ```bash
 docker pull crhacky/dfireballz:latest
-docker pull crhacky/dfireballz:v1.0.0
+docker pull crhacky/dfireballz:v2.0.0
 ```
 
 ---

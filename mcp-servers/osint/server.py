@@ -1,13 +1,15 @@
 """OSINT MCP Server — Aggregates Maigret, Sherlock, Holehe, theHarvester, and more."""
 
 import subprocess
-from typing import Optional
 
 from fastmcp import FastMCP
 
 mcp = FastMCP(
     "osint",
-    description="OSINT: Maigret, Sherlock, Holehe, SpiderFoot, theHarvester, DNSTwist, h8mail, subfinder",
+    description=(
+        "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, "
+        "theHarvester, DNSTwist, h8mail, subfinder"
+    ),
 )
 
 
@@ -29,7 +31,11 @@ def _run(args: list[str], timeout: int = 300) -> dict:
 
 
 @mcp.tool()
-def username_search(username: str, platforms: Optional[str] = None, output_format: str = "text") -> dict:
+def username_search(
+    username: str,
+    platforms: str | None = None,
+    output_format: str = "text",
+) -> dict:
     """Search for a username across 500+ platforms using Maigret and Sherlock.
 
     Args:

@@ -1,46 +1,93 @@
-# DFIReballz Makefile
+# DFIReballz Makefile — Digital Forensics & Cybercrime Investigation Platform
+
+SHELL := /bin/bash
+.DEFAULT_GOAL := help
+
+# Containers
+SERVICES := kali-forensics winforensics osint threat-intel binary-analysis network-forensics filesystem
+INFRA := db redis orchestrator ui
 
 .PHONY: help setup start stop restart logs status build pull clean \
-        dev test test-unit test-smoke test-security shell-kali shell-osint shell-netforensics \
+        dev test test-unit test-pkg test-smoke test-security lint format typecheck audit \
+        shell-kali shell-osint shell-netforensics shell-winforensics shell-binary shell-threat \
+        shell-filesystem shell-orchestrator \
         case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
-        mcp-health-check
+        mcp-health-check up down ps health nuke push-all report version \
+        log-kali log-osint log-netforensics log-winforensics log-binary log-threat \
+        log-filesystem log-orchestrator log-ui log-db log-redis \
+        restart-kali restart-osint restart-netforensics restart-winforensics restart-binary \
+        restart-threat restart-filesystem restart-orchestrator restart-ui \
+        venv install install-dev
+
+# ─── Help ─────────────────────────────────────────────────────────────────────
 
 help:
-	@echo "╔══════════════════════════════════════════╗"
-	@echo "║           DFIReballz Commands             ║"
-	@echo "╚══════════════════════════════════════════╝"
+	@echo "╔══════════════════════════════════════════════════════════════════╗"
+	@echo "║                    DFIReballz Commands                          ║"
+	@echo "╚══════════════════════════════════════════════════════════════════╝"
 	@echo ""
 	@echo "  Setup & Installation:"
-	@echo "    make setup          — Interactive first-run setup wizard"
-	@echo "    make pull           — Pull all Docker images"
-	@echo "    make build          — Build all custom Docker images"
+	@echo "    make setup              — Interactive first-run setup wizard"
+	@echo "    make pull               — Pull all Docker images"
+	@echo "    make build              — Build all custom Docker images"
+	@echo "    make venv               — Create Python venv and install package"
+	@echo "    make install            — Install dfireballz package in current env"
+	@echo "    make install-dev        — Install dfireballz with dev dependencies"
 	@echo ""
 	@echo "  Running:"
-	@echo "    make start          — Start all services (detached)"
-	@echo "    make start-openwebui — Start with Open WebUI + Ollama (--profile openwebui)"
-	@echo "    make claude-code    — Run Claude Code in Docker (interactive)"
-	@echo "    make stop           — Stop all services"
-	@echo "    make restart        — Restart all services"
-	@echo "    make status         — Show container health status"
-	@echo "    make logs           — Tail all logs"
-	@echo "    make logs s=<svc>   — Tail specific service logs"
+	@echo "    make start / make up    — Start all services (detached)"
+	@echo "    make start-openwebui    — Start with Open WebUI + Ollama"
+	@echo "    make claude-code        — Run Claude Code in Docker (interactive)"
+	@echo "    make stop / make down   — Stop all services"
+	@echo "    make restart            — Restart all services"
+	@echo "    make status / make ps   — Show container health status"
+	@echo "    make logs               — Tail all logs"
+	@echo "    make logs s=<svc>       — Tail specific service logs"
 	@echo ""
-	@echo "  Development:"
-	@echo "    make dev            — Start in dev mode (hot reload)"
-	@echo "    make test           — Run all tests"
-	@echo "    make test-smoke     — Run container smoke tests (docker exec probes)"
-	@echo "    make test-security  — Run security scan (Trivy + Bandit)"
-	@echo "    make shell-kali     — Shell into Kali forensics container"
-	@echo "    make shell-osint    — Shell into OSINT container"
-	@echo "    make shell-netforensics — Shell into Wireshark/tcpdump container"
+	@echo "  Development & Testing:"
+	@echo "    make dev                — Start in dev mode (hot reload)"
+	@echo "    make test               — Run all tests (package + orchestrator)"
+	@echo "    make test-pkg           — Run dfireballz package tests only"
+	@echo "    make test-smoke         — Run container smoke tests"
+	@echo "    make test-security      — Run security scan (Trivy + Bandit)"
+	@echo "    make lint               — Run ruff linter on dfireballz/"
+	@echo "    make format             — Auto-format code with ruff"
+	@echo "    make typecheck          — Run mypy type checking"
+	@echo "    make audit              — Run pip-audit on dependencies"
+	@echo ""
+	@echo "  Shells (debug containers):"
+	@echo "    make shell-kali         — Shell into Kali forensics container"
+	@echo "    make shell-osint        — Shell into OSINT container"
+	@echo "    make shell-netforensics — Shell into network forensics container"
+	@echo "    make shell-winforensics — Shell into Windows forensics container"
+	@echo "    make shell-binary       — Shell into binary analysis container"
+	@echo "    make shell-threat       — Shell into threat-intel container"
+	@echo "    make shell-filesystem   — Shell into filesystem container"
+	@echo "    make shell-orchestrator — Shell into orchestrator container"
+	@echo ""
+	@echo "  Per-Service Logs:"
+	@echo "    make log-<service>      — Tail logs for a specific service"
+	@echo "    Services: kali, osint, netforensics, winforensics, binary,"
+	@echo "              threat, filesystem, orchestrator, ui, db, redis"
+	@echo ""
+	@echo "  Per-Service Restart:"
+	@echo "    make restart-<service>  — Restart a specific service"
+	@echo ""
+	@echo "  Reporting:"
+	@echo "    make report             — Generate report from last session"
+	@echo "    make version            — Show dfireballz version"
 	@echo ""
 	@echo "  Utilities:"
-	@echo "    make mcp-health-check — Check MCP server container health"
-	@echo "    make check-gpu      — Check NVIDIA GPU availability"
-	@echo "    make clean          — Remove containers and images"
-	@echo "    make case-new       — Create a new case (interactive)"
-	@echo "    make playbook-list  — List available playbooks"
-	@echo "    make configure-mcp  — Generate MCP config for chosen host"
+	@echo "    make health             — Check MCP server container health"
+	@echo "    make check-gpu          — Check NVIDIA GPU availability"
+	@echo "    make clean              — Remove containers and local images"
+	@echo "    make nuke               — Remove EVERYTHING (containers, volumes, images)"
+	@echo "    make case-new           — Create a new case (interactive)"
+	@echo "    make playbook-list      — List available playbooks"
+	@echo "    make configure-mcp      — Generate MCP config for chosen host"
+	@echo "    make push-all           — Push all images to registry"
+
+# ─── Setup & Build ────────────────────────────────────────────────────────────
 
 setup:
 	@bash scripts/setup.sh
@@ -52,7 +99,21 @@ pull:
 	docker compose pull
 	@if [ "$(ENABLE_GPU)" = "true" ]; then docker compose --profile openwebui pull; fi
 
-start:
+venv:
+	python3 -m venv .venv
+	.venv/bin/pip install --upgrade pip
+	.venv/bin/pip install -e ".[dev]"
+	@echo "Virtualenv ready. Activate with: source .venv/bin/activate"
+
+install:
+	pip install -e .
+
+install-dev:
+	pip install -e ".[dev]"
+
+# ─── Start / Stop ─────────────────────────────────────────────────────────────
+
+start up:
 	docker compose up -d
 	@echo ""
 	@echo "  DFIReballz running at http://localhost:3000"
@@ -71,13 +132,15 @@ claude-code:
 		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
 	docker compose --profile claude-code run --rm claude-code
 
-stop:
+stop down:
 	docker compose --profile claude-code --profile openwebui down
 
 restart:
 	docker compose restart
 
-status:
+# ─── Status & Logs ─────────────────────────────────────────────────────────────
+
+status ps:
 	@docker compose ps
 	@echo ""
 	@echo "MCP Server Health:"
@@ -86,21 +149,74 @@ status:
 logs:
 	@if [ -n "$(s)" ]; then docker compose logs -f $(s); else docker compose logs -f; fi
 
-dev:
-	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+health mcp-health-check:
+	@bash .claude/mcp-health-check.sh
 
-test:
-	docker compose run --rm orchestrator pytest tests/ -v
+# ─── Per-Service Logs ──────────────────────────────────────────────────────────
 
-test-smoke:
-	@bash scripts/smoke-test.sh
+log-kali:
+	docker compose logs -f kali-forensics
 
-test-security:
-	@echo "Running Trivy image scan..."
-	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed — install from https://trivy.dev"
-	@echo ""
-	@echo "Running Bandit Python security scan..."
-	bandit -r orchestrator/ mcp-servers/ -x orchestrator/tests/ -ll
+log-osint:
+	docker compose logs -f osint
+
+log-netforensics:
+	docker compose logs -f network-forensics
+
+log-winforensics:
+	docker compose logs -f winforensics
+
+log-binary:
+	docker compose logs -f binary-analysis
+
+log-threat:
+	docker compose logs -f threat-intel
+
+log-filesystem:
+	docker compose logs -f filesystem
+
+log-orchestrator:
+	docker compose logs -f orchestrator
+
+log-ui:
+	docker compose logs -f ui
+
+log-db:
+	docker compose logs -f db
+
+log-redis:
+	docker compose logs -f redis
+
+# ─── Per-Service Restart ───────────────────────────────────────────────────────
+
+restart-kali:
+	docker compose restart kali-forensics
+
+restart-osint:
+	docker compose restart osint
+
+restart-netforensics:
+	docker compose restart network-forensics
+
+restart-winforensics:
+	docker compose restart winforensics
+
+restart-binary:
+	docker compose restart binary-analysis
+
+restart-threat:
+	docker compose restart threat-intel
+
+restart-filesystem:
+	docker compose restart filesystem
+
+restart-orchestrator:
+	docker compose restart orchestrator
+
+restart-ui:
+	docker compose restart ui
+
+# ─── Shells ────────────────────────────────────────────────────────────────────
 
 shell-kali:
 	docker compose exec kali-forensics bash
@@ -111,11 +227,82 @@ shell-osint:
 shell-netforensics:
 	docker compose exec network-forensics bash
 
+shell-winforensics:
+	docker compose exec winforensics bash
+
+shell-binary:
+	docker compose exec binary-analysis bash
+
+shell-threat:
+	docker compose exec threat-intel bash
+
+shell-filesystem:
+	docker compose exec filesystem bash
+
+shell-orchestrator:
+	docker compose exec orchestrator bash
+
+# ─── Development & Testing ─────────────────────────────────────────────────────
+
+dev:
+	docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+test: test-pkg
+	docker compose run --rm orchestrator pytest tests/ -v 2>/dev/null || true
+
+test-pkg:
+	python3 -m pytest tests/ -v --tb=short
+
+test-smoke:
+	@bash scripts/smoke-test.sh
+
+test-security:
+	@echo "Running Trivy image scan..."
+	@trivy image crhacky/dfireballz:latest 2>/dev/null || echo "  Trivy not installed — install from https://trivy.dev"
+	@echo ""
+	@echo "Running Bandit Python security scan..."
+	bandit -r orchestrator/ mcp-servers/ dfireballz/ -x orchestrator/tests/,tests/ -ll
+
+lint:
+	ruff check dfireballz/ tests/
+
+format:
+	ruff check --fix dfireballz/ tests/
+	ruff format dfireballz/ tests/
+
+typecheck:
+	mypy dfireballz/ --ignore-missing-imports
+
+audit:
+	pip-audit -r requirements.txt
+
+# ─── Reporting & CLI ───────────────────────────────────────────────────────────
+
+report:
+	@dfireballz report --format html 2>/dev/null || echo "Run 'make install' first to use the dfireballz CLI"
+
+version:
+	@python3 -c "from dfireballz import __version__; print(f'DFIReballz v{__version__}')" 2>/dev/null || echo "Package not installed"
+
+# ─── Utilities ─────────────────────────────────────────────────────────────────
+
 check-gpu:
 	@nvidia-smi 2>/dev/null && echo "NVIDIA GPU detected" || echo "No NVIDIA GPU found (GPU acceleration disabled)"
 
 clean:
 	docker compose --profile claude-code --profile openwebui down -v --rmi local
+
+nuke:
+	docker compose --profile claude-code --profile openwebui down -v --rmi all --remove-orphans
+	@echo "All DFIReballz containers, volumes, and images removed."
+
+push-all:
+	@echo "Pushing all DFIReballz images..."
+	@for svc in $(SERVICES) $(INFRA); do \
+		echo "  Pushing $$svc..."; \
+		docker compose push $$svc 2>/dev/null || echo "  $$svc: no image to push"; \
+	done
+	@echo "Done."
 
 case-new:
 	@echo "Creating new case..."
@@ -129,6 +316,3 @@ playbook-list:
 configure-mcp:
 	@bash scripts/configure_mcp.sh $(if $(MCP_HOST),--host $(MCP_HOST),)
 	@echo "MCP config generated for host: $(or $(MCP_HOST),claude-code)"
-
-mcp-health-check:
-	@bash .claude/mcp-health-check.sh

@@ -2,16 +2,14 @@
 
 import os
 from contextlib import asynccontextmanager
-from typing import Optional
 from uuid import UUID
 
 import redis.asyncio as redis
+from case_manager import CaseManager
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from case_manager import CaseManager
 from playbook_runner import PlaybookRunner
+from pydantic import BaseModel
 from report_generator import ReportGenerator
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
@@ -58,31 +56,31 @@ app.add_middleware(
 class CaseCreate(BaseModel):
     title: str
     case_type: str = "other"
-    description: Optional[str] = None
+    description: str | None = None
     classification: str = "confidential"
-    investigator: Optional[str] = None
+    investigator: str | None = None
 
 
 class CaseUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    status: Optional[str] = None
-    classification: Optional[str] = None
-    investigator: Optional[str] = None
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    classification: str | None = None
+    investigator: str | None = None
 
 
 class IOCCreate(BaseModel):
     ioc_type: str
     value: str
     confidence: int = 50
-    source: Optional[str] = None
-    mitre_technique: Optional[str] = None
-    notes: Optional[str] = None
+    source: str | None = None
+    mitre_technique: str | None = None
+    notes: str | None = None
 
 
 class PlaybookRun(BaseModel):
     playbook_name: str
-    evidence_id: Optional[str] = None
+    evidence_id: str | None = None
 
 
 # ─── Health ──────────────────────────────────────────────────────────
@@ -115,7 +113,7 @@ async def create_case(case: CaseCreate):
 
 
 @app.get("/cases")
-async def list_cases(status: Optional[str] = None, case_type: Optional[str] = None):
+async def list_cases(status: str | None = None, case_type: str | None = None):
     """List all cases, optionally filtered."""
     return await app.state.case_manager.list_cases(status=status, case_type=case_type)
 
@@ -144,7 +142,7 @@ async def update_case(case_id: UUID, updates: CaseUpdate):
 
 
 @app.post("/cases/{case_id}/evidence")
-async def upload_evidence(case_id: UUID, file: UploadFile = File(...)):
+async def upload_evidence(case_id: UUID, file: UploadFile = File(...)):  # noqa: B008
     """Upload evidence file — auto-hashes and creates CoC entry."""
     return await app.state.case_manager.add_evidence(str(case_id), file)
 

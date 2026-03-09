@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # DFIReballz — Claude Code SessionStart hook
-# Runs automatically when Claude Code opens this project on the host.
-# Verifies the Docker stack is running and MCP servers are reachable.
+# Runs automatically when Claude Code opens this project.
+# In remote (web) mode: installs package + sets up venv.
+# On host: verifies the Docker stack is running and MCP servers are reachable.
 set -euo pipefail
 
 # Skip when running inside the containerized Claude Code
@@ -10,6 +11,36 @@ if [ "${DFIREBALLZ_CONTAINER:-}" = "1" ]; then
 fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
+
+# ── Remote (Claude Code Web) setup ──────────────────────────────────
+if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
+  cd "$PROJECT_DIR"
+
+  # Create virtual environment if it doesn't exist
+  if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
+  fi
+
+  # Install package with dev dependencies (editable mode)
+  .venv/bin/pip install -e ".[dev]" --quiet
+
+  # Create .env from example if it doesn't exist
+  if [ ! -f ".env" ] && [ -f "config/.env.example" ]; then
+    cp config/.env.example .env
+  fi
+
+  # Export venv bin to PATH for the session
+  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+    echo "export PATH=\"$PROJECT_DIR/.venv/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+  fi
+
+  # Run MCP health check (informational — does not block startup)
+  if [ -x ".claude/mcp-health-check.sh" ]; then
+    .claude/mcp-health-check.sh 2>&1 || true
+  fi
+
+  exit 0
+fi
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'

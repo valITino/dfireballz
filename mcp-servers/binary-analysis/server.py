@@ -7,7 +7,6 @@ import subprocess
 import tempfile
 from collections import Counter
 from pathlib import Path
-from typing import Optional
 
 from fastmcp import FastMCP
 
@@ -84,7 +83,14 @@ def static_analyze(file_path: str) -> dict:
                 }
                 for s in pe.sections
             ],
-            "imports": [e.dll.decode("utf-8", errors="replace") for e in (pe.DIRECTORY_ENTRY_IMPORT if hasattr(pe, "DIRECTORY_ENTRY_IMPORT") else [])],
+            "imports": [
+                e.dll.decode("utf-8", errors="replace")
+                for e in (
+                    pe.DIRECTORY_ENTRY_IMPORT
+                    if hasattr(pe, "DIRECTORY_ENTRY_IMPORT")
+                    else []
+                )
+            ],
             "is_dll": pe.is_dll(),
             "is_exe": pe.is_exe(),
         }
@@ -142,7 +148,7 @@ def strings_extract(file_path: str, min_length: int = 4, encoding: str = "both")
 
 
 @mcp.tool()
-def ghidra_decompile(binary_path: str, function_name_or_offset: Optional[str] = None) -> dict:
+def ghidra_decompile(binary_path: str, function_name_or_offset: str | None = None) -> dict:
     """Decompile a binary using Ghidra headless analyzer.
 
     Args:
@@ -306,13 +312,29 @@ def import_export_table(binary_path: str) -> dict:
             for entry in pe.DIRECTORY_ENTRY_IMPORT:
                 dll_name = entry.dll.decode("utf-8", errors="replace")
                 for imp in entry.imports:
-                    func_name = imp.name.decode("utf-8", errors="replace") if imp.name else f"ordinal_{imp.ordinal}"
-                    results["imports"].append({"dll": dll_name, "function": func_name, "address": hex(imp.address)})
+                    func_name = (
+                        imp.name.decode("utf-8", errors="replace")
+                        if imp.name
+                        else f"ordinal_{imp.ordinal}"
+                    )
+                    results["imports"].append({
+                        "dll": dll_name,
+                        "function": func_name,
+                        "address": hex(imp.address),
+                    })
 
         if hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
             for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
-                func_name = exp.name.decode("utf-8", errors="replace") if exp.name else f"ordinal_{exp.ordinal}"
-                results["exports"].append({"function": func_name, "ordinal": exp.ordinal, "address": hex(exp.address)})
+                func_name = (
+                    exp.name.decode("utf-8", errors="replace")
+                    if exp.name
+                    else f"ordinal_{exp.ordinal}"
+                )
+                results["exports"].append({
+                    "function": func_name,
+                    "ordinal": exp.ordinal,
+                    "address": hex(exp.address),
+                })
 
         pe.close()
     except Exception as e:

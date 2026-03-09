@@ -3,13 +3,15 @@
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from fastmcp import FastMCP
 
 mcp = FastMCP(
     "network-forensics",
-    description="Network: 18-tool Wireshark/tshark suite, tcpdump capture, PCAP split/merge/carve, threat detection",
+    description=(
+        "Network: 18-tool Wireshark/tshark suite, tcpdump capture, "
+        "PCAP split/merge/carve, threat detection"
+    ),
 )
 
 EVIDENCE_DIR = Path("/evidence")
@@ -65,7 +67,7 @@ def wireshark_system_info(info_type: str = "interfaces") -> dict:
 def wireshark_live_capture(
     interface: str = "any",
     duration: int = 30,
-    filter: Optional[str] = None,
+    filter: str | None = None,
     max_packets: int = 1000,
 ) -> dict:
     """Perform live packet capture with tshark.
@@ -102,9 +104,22 @@ def wireshark_analyze_pcap(filepath: str, analysis_type: str = "summary") -> dic
     elif analysis_type == "security":
         # Run multiple security-relevant analyses
         results = {}
-        results["cleartext"] = _run(["tshark", "-r", str(path), "-Y", "http.request or ftp or telnet or smtp", "-T", "fields", "-e", "ip.src", "-e", "ip.dst", "-e", "frame.protocols"])
-        results["dns"] = _run(["tshark", "-r", str(path), "-Y", "dns.qry.name", "-T", "fields", "-e", "dns.qry.name"])
-        results["suspicious_ports"] = _run(["tshark", "-r", str(path), "-Y", "tcp.port==4444 or tcp.port==1337 or tcp.port==31337 or tcp.port==8888", "-c", "100"])
+        results["cleartext"] = _run([
+            "tshark", "-r", str(path), "-Y",
+            "http.request or ftp or telnet or smtp",
+            "-T", "fields", "-e", "ip.src",
+            "-e", "ip.dst", "-e", "frame.protocols",
+        ])
+        results["dns"] = _run([
+            "tshark", "-r", str(path), "-Y", "dns.qry.name",
+            "-T", "fields", "-e", "dns.qry.name",
+        ])
+        results["suspicious_ports"] = _run([
+            "tshark", "-r", str(path), "-Y",
+            "tcp.port==4444 or tcp.port==1337 "
+            "or tcp.port==31337 or tcp.port==8888",
+            "-c", "100",
+        ])
         return results
     return {"error": f"Unknown analysis_type: {analysis_type}"}
 
@@ -133,7 +148,11 @@ def wireshark_get_conversations(filepath: str, transport: str = "tcp") -> dict:
 
 
 @mcp.tool()
-def wireshark_follow_stream(filepath: str, stream_type: str = "tcp", stream_index: int = 0) -> dict:
+def wireshark_follow_stream(
+    filepath: str,
+    stream_type: str = "tcp",
+    stream_index: int = 0,
+) -> dict:
     """Reconstruct and follow a stream from a PCAP.
 
     Args:
@@ -142,11 +161,16 @@ def wireshark_follow_stream(filepath: str, stream_type: str = "tcp", stream_inde
         stream_index: Stream index to follow
     """
     path = _validate_path(filepath)
-    return _run(["tshark", "-r", str(path), "-q", "-z", f"follow,{stream_type},ascii,{stream_index}"])
+    follow_arg = f"follow,{stream_type},ascii,{stream_index}"
+    return _run(["tshark", "-r", str(path), "-q", "-z", follow_arg])
 
 
 @mcp.tool()
-def wireshark_apply_filter(filepath: str, display_filter: str, output_file: Optional[str] = None) -> dict:
+def wireshark_apply_filter(
+    filepath: str,
+    display_filter: str,
+    output_file: str | None = None,
+) -> dict:
     """Filter PCAP with a Wireshark display filter.
 
     Args:
@@ -163,7 +187,11 @@ def wireshark_apply_filter(filepath: str, display_filter: str, output_file: Opti
 
 
 @mcp.tool()
-def wireshark_export_objects(filepath: str, protocol: str = "http", output_dir: Optional[str] = None) -> dict:
+def wireshark_export_objects(
+    filepath: str,
+    protocol: str = "http",
+    output_dir: str | None = None,
+) -> dict:
     """Carve transferred files from PCAP (HTTP/SMB/FTP/DICOM objects).
 
     Args:
@@ -178,7 +206,12 @@ def wireshark_export_objects(filepath: str, protocol: str = "http", output_dir: 
 
 
 @mcp.tool()
-def wireshark_split_pcap(filepath: str, split_by: str = "packets", value: int = 10000, output_dir: Optional[str] = None) -> dict:
+def wireshark_split_pcap(
+    filepath: str,
+    split_by: str = "packets",
+    value: int = 10000,
+    output_dir: str | None = None,
+) -> dict:
     """Split a PCAP into smaller files.
 
     Args:
@@ -279,13 +312,20 @@ def wireshark_generate_filter(description: str, complexity: str = "basic") -> di
         "cleartext passwords": "http.authorization or ftp.request.command==PASS",
         "dns tunneling": 'dns.qry.name matches "^.{50,}"',
         "c2 beaconing": "tcp.flags.syn==1 && tcp.flags.ack==0",
-        "malware callbacks": "http.request && !(http.host matches \"(google|microsoft|apple|amazon)\")",
+        "malware callbacks": (
+            "http.request && !(http.host matches "
+            "\"(google|microsoft|apple|amazon)\")"
+        ),
     }
 
     desc_lower = description.lower()
     for key, filter_str in filter_map.items():
         if key in desc_lower:
-            return {"filter": filter_str, "description": description, "note": "Generated from pattern matching"}
+            return {
+                "filter": filter_str,
+                "description": description,
+                "note": "Generated from pattern matching",
+            }
 
     return {
         "filter": description,
@@ -385,7 +425,7 @@ def wireshark_extract_tls(filepath: str) -> dict:
 @mcp.tool()
 def tcpdump_capture(
     interface: str = "any",
-    filter: Optional[str] = None,
+    filter: str | None = None,
     duration: int = 30,
     output_file: str = "/evidence/capture.pcap",
 ) -> dict:
