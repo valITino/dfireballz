@@ -1,11 +1,11 @@
 name: Build and Push Docker Images
 
 on:
-  # Auto-trigger: fires after CI workflow completes on main
+  # Auto-trigger: fires after CI workflow completes on main/master
   workflow_run:
     workflows: ["CI"]
     types: [completed]
-    branches: [main]
+    branches: [main, master]
 
   # Auto-trigger: version tags bypass CI wait (tag push implies tested code)
   push:
@@ -28,7 +28,7 @@ jobs:
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     permissions:
-      contents: write
+      contents: read
       packages: write
       security-events: write
 
@@ -36,39 +36,50 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - service: orchestrator
-            context: ./orchestrator
-            scout: false
-          - service: ui
-            context: ./ui
-            scout: false
           - service: kali-forensics
             context: ./mcp-servers/kali-forensics
+            tag_prefix: "kali-forensics-"
             scout: true
           - service: winforensics
             context: ./mcp-servers/winforensics
+            tag_prefix: "winforensics-"
             scout: false
           - service: osint
             context: ./mcp-servers/osint
+            tag_prefix: "osint-"
             scout: false
           - service: threat-intel
             context: ./mcp-servers/threat-intel
+            tag_prefix: "threat-intel-"
             scout: false
           - service: binary-analysis
             context: ./mcp-servers/binary-analysis
+            tag_prefix: "binary-analysis-"
             scout: false
           - service: network-forensics
             context: ./mcp-servers/network-forensics
+            tag_prefix: "network-forensics-"
             scout: false
           - service: filesystem
             context: ./mcp-servers/filesystem
+            tag_prefix: "filesystem-"
+            scout: false
+          - service: orchestrator
+            context: ./orchestrator
+            tag_prefix: "orchestrator-"
+            scout: false
+          - service: ui
+            context: ./ui
+            tag_prefix: "ui-"
             scout: false
           - service: db
             context: ./database
+            tag_prefix: "db-"
             scout: false
           - service: claude-code
             context: .
             dockerfile: docker/claude-code.Dockerfile
+            tag_prefix: "claude-code-"
             scout: false
 
     steps:
@@ -79,11 +90,11 @@ jobs:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || '' }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: Log in to Docker Hub
         env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_USERNAME: crhacky
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           max_attempts=5
@@ -105,44 +116,41 @@ jobs:
           echo "::error::Docker login failed after ${max_attempts} attempts"
           exit 1
 
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            prefix=${{ matrix.tag_prefix }},onlatest=true
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=${{ matrix.tag_prefix }}
+            type=raw,value=${{ matrix.tag_prefix }}latest,enable={{is_default_branch}}
+
       - name: Build and push ${{ matrix.service }}
-        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.service }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          tags: crhacky/dfireballz:${{ matrix.service }}
 
       - name: Docker Scout - Vulnerability Scan
-        uses: docker/scout-action@75ec1d410792f411fb41df7ab69a62d14d9b6884 # v1.20.1
+        uses: docker/scout-action@v1
         if: ${{ always() && matrix.scout }}
         with:
           command: cves
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.service }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           sarif-file: sarif.output.json
           summary: true
         continue-on-error: true
 
       - name: Upload SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@820e3160e279568db735cee8ed8f8e77a6da7818 # v3.32.6
+        uses: github/codeql-action/upload-sarif@v4
         if: ${{ always() && matrix.scout }}
         with:
           sarif_file: sarif.output.json
         continue-on-error: true
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
-        with:
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
