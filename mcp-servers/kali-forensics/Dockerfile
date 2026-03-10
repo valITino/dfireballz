@@ -34,7 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Python packages
-RUN pip3 install --break-system-packages --no-cache-dir \
+RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed \
     "fastmcp<3" \
     volatility3 \
     pyshark \
