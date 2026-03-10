@@ -25,7 +25,7 @@ MCP_CONFIG='{
   "mcpServers": {
     "kali-forensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "-m", "server"],
+      "args": ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "/app/server.py"],
       "description": "Kali forensics: Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
     },
     "winforensics": {
@@ -35,27 +35,27 @@ MCP_CONFIG='{
     },
     "osint": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-osint-1", "python3", "-m", "server"],
+      "args": ["exec", "-i", "dfireballz-osint-1", "python3", "/app/server.py"],
       "description": "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, theHarvester, DNSTwist, h8mail, subfinder"
     },
     "threat-intel": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-threat-intel-1", "python3", "-m", "server"],
+      "args": ["exec", "-i", "dfireballz-threat-intel-1", "python3", "/app/server.py"],
       "description": "Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan"
     },
     "binary-analysis": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "-m", "server"],
+      "args": ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "/app/server.py"],
       "description": "Binary/malware: Ghidra headless, Radare2, Capa, YARA, pefile, entropy analysis"
     },
     "network-forensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-network-forensics-1", "python3", "-m", "server"],
+      "args": ["exec", "-i", "dfireballz-network-forensics-1", "python3", "/app/server.py"],
       "description": "Network: 18-tool Wireshark/tshark suite, tcpdump capture, PCAP split/merge/carve, threat detection"
     },
     "filesystem": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports"],
+      "args": ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"],
       "description": "Scoped evidence filesystem"
     }
   }
@@ -99,25 +99,25 @@ case $MCP_HOST in
         MCPHOST_CONFIG='mcpServers:
   kali-forensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "-m", "server"]
+    args: ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "/app/server.py"]
   winforensics:
     command: docker
     args: ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"]
   osint:
     command: docker
-    args: ["exec", "-i", "dfireballz-osint-1", "python3", "-m", "server"]
+    args: ["exec", "-i", "dfireballz-osint-1", "python3", "/app/server.py"]
   threat-intel:
     command: docker
-    args: ["exec", "-i", "dfireballz-threat-intel-1", "python3", "-m", "server"]
+    args: ["exec", "-i", "dfireballz-threat-intel-1", "python3", "/app/server.py"]
   binary-analysis:
     command: docker
-    args: ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "-m", "server"]
+    args: ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "/app/server.py"]
   network-forensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-network-forensics-1", "python3", "-m", "server"]
+    args: ["exec", "-i", "dfireballz-network-forensics-1", "python3", "/app/server.py"]
   filesystem:
     command: docker
-    args: ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports"]'
+    args: ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"]'
 
         echo "$MCPHOST_CONFIG" > "$HOME/.mcphost.yml"
         echo "Written ~/.mcphost.yml"
