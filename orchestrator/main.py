@@ -286,8 +286,8 @@ async def update_settings(settings: SettingsUpdate) -> dict[str, Any]:
 
 @app.get("/settings/mcp-status")
 async def mcp_status() -> dict[str, Any]:
-    """Health check all MCP server containers."""
-    import subprocess
+    """Health check all MCP server containers via Docker Engine API."""
+    import httpx
 
     servers = [
         "dfireballz-kali-forensics-1",
@@ -298,21 +298,32 @@ async def mcp_status() -> dict[str, Any]:
         "dfireballz-network-forensics-1",
         "dfireballz-filesystem-1",
     ]
-    statuses = {}
-    for server in servers:
-        name = server.replace("dfireballz-", "").replace("-1", "")
-        try:
-            result = subprocess.run(
-                ["docker", "exec", server, "echo", "ping"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-                shell=False,
-            )
-            statuses[name] = {
-                "status": "healthy" if result.returncode == 0 else "unhealthy",
-                "response": result.stdout.strip(),
-            }
-        except Exception as e:
-            statuses[name] = {"status": "unreachable", "error": str(e)}
+    statuses: dict[str, dict[str, str]] = {}
+    transport = httpx.AsyncHTTPTransport(uds="/var/run/docker.sock")
+    async with httpx.AsyncClient(transport=transport, timeout=10) as client:
+        for server in servers:
+            name = server.replace("dfireballz-", "").replace("-1", "")
+            try:
+                resp = await client.get(
+                    f"http://localhost/containers/{server}/json",
+                )
+                if resp.status_code == 404:
+                    statuses[name] = {"status": "not_found"}
+                    continue
+                info = resp.json()
+                state = info.get("State", {})
+                container_status = state.get("Status", "unknown")
+                health_info = state.get("Health", {})
+                health_status = health_info.get("Status", "no_healthcheck")
+                if container_status == "running" and health_status == "healthy":
+                    statuses[name] = {"status": "healthy"}
+                elif container_status == "running":
+                    statuses[name] = {
+                        "status": "running",
+                        "health": health_status,
+                    }
+                else:
+                    statuses[name] = {"status": container_status}
+            except Exception as e:
+                statuses[name] = {"status": "unreachable", "error": str(e)}
     return statuses

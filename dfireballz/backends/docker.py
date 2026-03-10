@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import shutil
 from typing import Any
 
 from dfireballz.backends.base import ToolBackend, ToolResult
 
 logger = logging.getLogger("dfireballz.backends.docker")
+
+DOCKER_SOCKET = "/var/run/docker.sock"
 
 # Maps tool names to their container and command builder.
 _TOOL_COMMANDS: dict[str, dict[str, Any]] = {
@@ -95,6 +98,10 @@ class DockerBackend(ToolBackend):
         pass
 
     async def health_check(self) -> bool:
+        # Prefer Docker socket (works inside containers without docker CLI)
+        if os.path.exists(DOCKER_SOCKET):
+            return True
+        # Fall back to checking for docker CLI on PATH
         return shutil.which("docker") is not None
 
     async def run_tool(
