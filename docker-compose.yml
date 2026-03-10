@@ -222,7 +222,9 @@ services:
       - ALL
     pids_limit: 256
     environment:
-      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}"
+      # Optional: leave empty to use interactive account login (recommended).
+      # Set in .env or export to use API key auth instead.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
       HOME: /home/claude
       DFIREBALLZ_CONTAINER: "1"
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"

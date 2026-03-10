@@ -241,11 +241,19 @@ async def get_settings() -> dict[str, Any]:
     api_keys_status: dict[str, dict[str, str | bool]] = {}
     for ui_name, env_var in _API_KEY_ENV_MAP.items():
         raw = os.environ.get(env_var, "")
-        api_keys_status[ui_name] = {
+        entry: dict[str, str | bool] = {
             "configured": bool(raw),
             "masked_value": _mask_key(raw) if raw else "",
             "env_var": env_var,
         }
+        # Anthropic key is optional — account login is the recommended auth method.
+        if ui_name == "anthropic":
+            entry["optional"] = True
+            entry["auth_hint"] = (
+                "Optional: leave empty to use Anthropic account login (recommended). "
+                "Set only for headless / CI / automated runs."
+            )
+        api_keys_status[ui_name] = entry
 
     return {
         "mcp_host": os.environ.get("MCP_HOST", "claude-code"),

@@ -10,10 +10,12 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Source .env if present
+# Source .env if present (avoid process substitution for portability)
 if [ -f .env ]; then
+    set -a
     # shellcheck source=/dev/null
-    source <(grep -v '^#' .env | sed 's/^/export /')
+    . .env
+    set +a
 fi
 
 MCP_HOST=${MCP_HOST:-${MCP_HOST_ENV:-claude-code}}

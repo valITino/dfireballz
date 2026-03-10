@@ -133,7 +133,14 @@ start-openwebui:
 
 claude-code:
 	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
-		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
+		echo ""; \
+		echo "  ℹ️  No ANTHROPIC_API_KEY found — Claude Code will prompt you to log in"; \
+		echo "     via your Anthropic account (recommended)."; \
+		echo ""; \
+		echo "     To use an API key instead, set ANTHROPIC_API_KEY in .env"; \
+		echo "     or export it before running this command."; \
+		echo ""; \
+	fi
 	docker compose --profile claude-code pull --ignore-pull-failures
 	docker compose --profile claude-code run --rm claude-code
 

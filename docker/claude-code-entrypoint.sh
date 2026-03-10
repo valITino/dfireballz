@@ -147,4 +147,24 @@ echo -e "  ${CYAN}Run a full OSINT sweep on user@example.com${NC}"
 echo -e "${DIM}──────────────────────────────────────────────────────${NC}"
 echo ""
 
+# ── Auth method detection ──────────────────────────────────────
+# Check for persisted account login (OAuth) in the claude-config volume
+HAS_ACCOUNT_AUTH=false
+if [ -d "$HOME/.claude" ] && [ -n "$(find "$HOME/.claude" -name '*.json' -newer /proc/1/cmdline 2>/dev/null || find "$HOME/.claude" -name '*.json' 2>/dev/null)" ]; then
+  HAS_ACCOUNT_AUTH=true
+fi
+
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  echo -e "  ${BOLD}Auth:${NC} ${GREEN}API key${NC} ${DIM}(from ANTHROPIC_API_KEY env var)${NC}"
+elif $HAS_ACCOUNT_AUTH; then
+  echo -e "  ${BOLD}Auth:${NC} ${GREEN}Account login${NC} ${DIM}(persisted in claude-config volume)${NC}"
+else
+  echo -e "  ${BOLD}Auth:${NC} ${YELLOW}Not configured${NC}"
+  echo -e "  ${DIM}Claude Code will prompt you to log in via your Anthropic account.${NC}"
+  echo -e "  ${DIM}Your login is persisted across restarts in the claude-config volume.${NC}"
+  echo ""
+  echo -e "  ${DIM}Alternatively, set ANTHROPIC_API_KEY in .env to use an API key.${NC}"
+fi
+echo ""
+
 exec claude "$@"
