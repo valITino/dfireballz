@@ -34,6 +34,11 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     echo "export PATH=\"$PROJECT_DIR/.venv/bin:\$PATH\"" >> "$CLAUDE_ENV_FILE"
   fi
 
+  # Generate .mcp.json if missing (MCP servers need this to be discovered)
+  if [ ! -f ".mcp.json" ] && [ -f "scripts/configure_mcp.sh" ]; then
+    bash scripts/configure_mcp.sh --host claude-code 2>/dev/null || true
+  fi
+
   # Run MCP health check (informational — does not block startup)
   if [ -x ".claude/mcp-health-check.sh" ]; then
     .claude/mcp-health-check.sh 2>&1 || true
