@@ -39,6 +39,13 @@ class Settings(BaseSettings):
         description="Orchestrator API base URL",
     )
 
+    # --- Claude Code auth ---
+    # Optional: leave empty to use interactive account login (recommended).
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic API key (optional — leave empty for account login)",
+    )
+
     # --- API Keys (threat intel) ---
     virustotal_api_key: str = Field(default="", description="VirusTotal API key")
     shodan_api_key: str = Field(default="", description="Shodan API key")
