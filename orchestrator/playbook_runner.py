@@ -57,9 +57,7 @@ class PlaybookRunner:
                 continue
         return None
 
-    async def run(
-        self, case_id: str, playbook_name: str, evidence_id: str | None = None
-    ) -> dict:
+    async def run(self, case_id: str, playbook_name: str) -> dict:
         """Execute a playbook against a case."""
         playbook = self.get_playbook(playbook_name)
         if not playbook:

@@ -49,6 +49,7 @@ def vt_lookup(indicator: str, type: str = "file_hash") -> dict:
 
     try:
         resp = requests.get(endpoints[type], headers=headers, timeout=30)
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -68,6 +69,7 @@ def shodan_host(ip: str) -> dict:
             params={"key": api_key},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -88,6 +90,7 @@ def shodan_search(query: str, page: int = 1) -> dict:
             params={"key": api_key, "query": query, "page": page},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -108,6 +111,7 @@ def abuse_ip_check(ip: str) -> dict:
             params={"ipAddress": ip, "maxAgeInDays": 90, "verbose": True},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -174,6 +178,7 @@ def urlscan_lookup(url: str) -> dict:
             json={"url": url, "visibility": "private"},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -192,6 +197,7 @@ def cve_lookup(cve_id: str) -> dict:
             params={"cveId": cve_id},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}
@@ -221,61 +227,30 @@ def enrich_ioc(ioc: str, type: str = "auto") -> dict:
             type = "domain"
         results["type"] = type
 
-    try:
-        if type == "ip":
-            try:
-                results["sources"]["shodan"] = shodan_host(ioc)
-            except Exception:
-                pass
-            try:
-                results["sources"]["abuseipdb"] = abuse_ip_check(ioc)
-            except Exception:
-                pass
-            try:
-                results["sources"]["virustotal"] = vt_lookup(ioc, "ip")
-            except Exception:
-                pass
-            try:
-                results["sources"]["threatfox"] = threatfox_lookup(ioc)
-            except Exception:
-                pass
+    def _try_source(name: str, func, *args) -> None:
+        try:
+            results["sources"][name] = func(*args)
+        except Exception as e:
+            results["sources"][name] = {"error": str(e)}
 
-        elif type == "domain":
-            try:
-                results["sources"]["virustotal"] = vt_lookup(ioc, "domain")
-            except Exception:
-                pass
-            try:
-                results["sources"]["threatfox"] = threatfox_lookup(ioc)
-            except Exception:
-                pass
+    if type == "ip":
+        _try_source("shodan", shodan_host, ioc)
+        _try_source("abuseipdb", abuse_ip_check, ioc)
+        _try_source("virustotal", vt_lookup, ioc, "ip")
+        _try_source("threatfox", threatfox_lookup, ioc)
 
-        elif type == "file_hash":
-            try:
-                results["sources"]["virustotal"] = vt_lookup(ioc, "file_hash")
-            except Exception:
-                pass
-            try:
-                results["sources"]["malware_bazaar"] = malware_bazaar_lookup(ioc)
-            except Exception:
-                pass
-            try:
-                results["sources"]["threatfox"] = threatfox_lookup(ioc)
-            except Exception:
-                pass
+    elif type == "domain":
+        _try_source("virustotal", vt_lookup, ioc, "domain")
+        _try_source("threatfox", threatfox_lookup, ioc)
 
-        elif type == "url":
-            try:
-                results["sources"]["virustotal"] = vt_lookup(ioc, "url")
-            except Exception:
-                pass
-            try:
-                results["sources"]["urlscan"] = urlscan_lookup(ioc)
-            except Exception:
-                pass
+    elif type == "file_hash":
+        _try_source("virustotal", vt_lookup, ioc, "file_hash")
+        _try_source("malware_bazaar", malware_bazaar_lookup, ioc)
+        _try_source("threatfox", threatfox_lookup, ioc)
 
-    except Exception as e:
-        results["error"] = str(e)
+    elif type == "url":
+        _try_source("virustotal", vt_lookup, ioc, "url")
+        _try_source("urlscan", urlscan_lookup, ioc)
 
     # Compute confidence score based on number of positive results
     positive_sources = sum(

@@ -132,7 +132,6 @@ case $MCP_HOST in
         ;;
 
     open-webui)
-        cp config/mcpo.json config/mcpo.json 2>/dev/null || true
         echo "mcpo config at config/mcpo.json is ready"
         echo ""
         echo "Start with: make start-openwebui"
@@ -144,7 +143,7 @@ case $MCP_HOST in
 
     *)
         echo "Unknown MCP host: ${MCP_HOST}"
-        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui, claude-code-docker"
+        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui"
         exit 1
         ;;
 esac

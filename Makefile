@@ -5,7 +5,7 @@ SHELL := /bin/bash
 
 # Containers
 SERVICES := kali-forensics winforensics osint threat-intel binary-analysis network-forensics filesystem
-INFRA := db redis orchestrator ui
+INFRA := db redis orchestrator
 
 .PHONY: help setup start stop restart logs status build pull clean \
         dev test test-unit test-pkg test-smoke test-security lint format typecheck audit \
@@ -14,9 +14,9 @@ INFRA := db redis orchestrator ui
         case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
         mcp-health-check up down ps health nuke push-all report version \
         log-kali log-osint log-netforensics log-winforensics log-binary log-threat \
-        log-filesystem log-orchestrator log-ui log-db log-redis \
+        log-filesystem log-orchestrator log-db log-redis \
         restart-kali restart-osint restart-netforensics restart-winforensics restart-binary \
-        restart-threat restart-filesystem restart-orchestrator restart-ui \
+        restart-threat restart-filesystem restart-orchestrator \
         venv install install-dev
 
 # ─── Help ─────────────────────────────────────────────────────────────────────
@@ -68,7 +68,7 @@ help:
 	@echo "  Per-Service Logs:"
 	@echo "    make log-<service>      — Tail logs for a specific service"
 	@echo "    Services: kali, osint, netforensics, winforensics, binary,"
-	@echo "              threat, filesystem, orchestrator, ui, db, redis"
+	@echo "              threat, filesystem, orchestrator, db, redis"
 	@echo ""
 	@echo "  Per-Service Restart:"
 	@echo "    make restart-<service>  — Restart a specific service"
@@ -120,8 +120,7 @@ start up:
 	@echo "  Waiting for containers to become healthy..."
 	@bash scripts/configure_mcp.sh --host "$$(grep '^MCP_HOST=' .env 2>/dev/null | cut -d= -f2 || echo claude-code)" 2>/dev/null || true
 	@echo ""
-	@echo "  DFIReballz running at http://localhost:3000"
-	@echo "  Orchestrator API: http://localhost:8800"
+	@echo "  DFIReballz running — Orchestrator API: http://localhost:8800"
 	@echo "  MCP config auto-generated — no need to run 'make configure-mcp' separately"
 
 start-openwebui:
@@ -184,9 +183,6 @@ log-filesystem:
 log-orchestrator:
 	docker compose logs -f orchestrator
 
-log-ui:
-	docker compose logs -f ui
-
 log-db:
 	docker compose logs -f db
 
@@ -218,9 +214,6 @@ restart-filesystem:
 
 restart-orchestrator:
 	docker compose restart orchestrator
-
-restart-ui:
-	docker compose restart ui
 
 # ─── Shells ────────────────────────────────────────────────────────────────────
 

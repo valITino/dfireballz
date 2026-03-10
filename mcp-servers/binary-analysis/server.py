@@ -3,6 +3,7 @@
 import hashlib
 import json
 import math
+import shutil
 import subprocess
 import tempfile
 from collections import Counter
@@ -159,21 +160,24 @@ def ghidra_decompile(binary_path: str, function_name_or_offset: str | None = Non
     project_dir = tempfile.mkdtemp(prefix="ghidra-projects-")
     project_name = f"analysis_{path.stem}"
 
-    cmd = [
-        "/opt/ghidra/support/analyzeHeadless",
-        project_dir,
-        project_name,
-        "-import", str(path),
-        "-overwrite",
-        "-scriptPath", "/opt/ghidra/Ghidra/Features/Decompiler/ghidra_scripts",
-    ]
+    try:
+        cmd = [
+            "/opt/ghidra/support/analyzeHeadless",
+            project_dir,
+            project_name,
+            "-import", str(path),
+            "-overwrite",
+            "-scriptPath", "/opt/ghidra/Ghidra/Features/Decompiler/ghidra_scripts",
+        ]
 
-    result = _run(cmd, timeout=600)
-    return {
-        "analysis_output": result.get("stdout", ""),
-        "errors": result.get("stderr", ""),
-        "function": function_name_or_offset,
-    }
+        result = _run(cmd, timeout=600)
+        return {
+            "analysis_output": result.get("stdout", ""),
+            "errors": result.get("stderr", ""),
+            "function": function_name_or_offset,
+        }
+    finally:
+        shutil.rmtree(project_dir, ignore_errors=True)
 
 
 @mcp.tool()

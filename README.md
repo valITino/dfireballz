@@ -89,11 +89,11 @@ Everything runs inside Docker containers. No forensic tools are installed on you
        ▼
 ┌──────────────────────────────────────────────────────────┐
 │              Infrastructure                               │
-│ ┌──────────────┐ ┌──────────┐ ┌────────┐ ┌────────────┐ │
-│ │ Orchestrator │ │    UI    │ │ Postgres│ │   Redis    │ │
-│ │  FastAPI     │ │  React   │ │pgcrypto │ │  Cache     │ │
-│ │  :8800       │ │  :3000   │ │  :5432  │ │  :6379     │ │
-│ └──────────────┘ └──────────┘ └────────┘ └────────────┘ │
+│ ┌──────────────┐ ┌─────────┐ ┌────────────┐              │
+│ │ Orchestrator │ │ Postgres│ │   Redis    │              │
+│ │  FastAPI     │ │pgcrypto │ │  Cache     │              │
+│ │  :8800       │ │  :5432  │ │  :6379     │              │
+│ └──────────────┘ └─────────┘ └────────────┘              │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -113,7 +113,6 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S | — | default |
 | **filesystem** | Scoped file access to /cases, /evidence (read-only), /reports | — | default |
 | **orchestrator** | FastAPI backend — cases, evidence, playbooks, chain of custody | 8800 | default |
-| **ui** | React investigator dashboard | 3000 | default |
 | **db** | PostgreSQL with pgcrypto (encrypted API key storage) | — | default |
 | **redis** | Redis cache | — | default |
 | **claude-code** | Anthropic CLI client in Docker (no host install needed) | — | `claude-code` |
@@ -163,7 +162,7 @@ cd dfireballz
 # 2. Run interactive setup (generates .env, pulls images, configures MCP — all in one)
 make setup
 
-# 3. Start all services (11 containers)
+# 3. Start all services (10 containers)
 make start
 ```
 
@@ -184,14 +183,11 @@ make status     # Container status table
 make health     # MCP server health check
 ```
 
-You should see 11 containers running:
+You should see 10 containers running:
 - 7 MCP servers (kali-forensics, winforensics, osint, threat-intel, binary-analysis, network-forensics, filesystem)
-- 4 infrastructure services (orchestrator, ui, db, redis)
+- 3 infrastructure services (orchestrator, db, redis)
 
-**Dashboard:** http://localhost:3000 (case management, evidence, reports) | **API:** http://localhost:8800
-
-> **Important:** The UI dashboard is for case management, evidence handling, and viewing reports.
-> The actual AI chat happens in your chosen MCP host (Claude Code, Claude Desktop, etc.) — not in the browser UI.
+**Orchestrator API:** http://localhost:8800
 
 ---
 
@@ -459,7 +455,7 @@ Reports are organized by date: `reports/reports-DDMMYYYY/report-<case-id>-DDMMYY
 
 ## API Keys Setup
 
-API keys are entered during `make setup` and stored in `.env`. They are injected into MCP server containers as environment variables. You can also view and update them from the UI Settings page (http://localhost:3000/settings).
+API keys are entered during `make setup` and stored in `.env`. They are injected into MCP server containers as environment variables.
 
 | Service | Used By | Free Tier | Get Key |
 |---------|---------|-----------|---------|
@@ -528,7 +524,7 @@ docker compose logs <service-name>    # e.g., kali-forensics, orchestrator
 
 Common causes:
 - Insufficient memory (16 GB recommended)
-- Port conflict on the host (8800, 3000)
+- Port conflict on the host (8800)
 - Missing or invalid `.env` configuration
 
 ### SessionStart hook reports issues
@@ -552,7 +548,7 @@ make pull               # Pull pre-built images from Docker Hub
 make build              # Build images locally from source (only if you modified Dockerfiles)
 
 # Running
-make start / make up    # Start all services (11 containers)
+make start / make up    # Start all services (10 containers)
 make stop / make down   # Stop all services
 make restart            # Restart all services
 make claude-code        # Launch Claude Code in Docker (interactive)
@@ -565,7 +561,7 @@ make health             # MCP server health check
 make logs               # Tail all logs
 make logs s=<svc>       # Tail specific service logs
 make log-<service>      # Tail logs (kali, osint, netforensics, winforensics,
-                        #   binary, threat, filesystem, orchestrator, ui, db, redis)
+                        #   binary, threat, filesystem, orchestrator, db, redis)
 
 # Per-Service Restart
 make restart-<service>  # Restart a specific service
@@ -631,7 +627,6 @@ dfireballz/
 │   ├── network-forensics/       # tshark (18 tools), tcpdump
 │   └── filesystem/              # Scoped file access
 ├── orchestrator/                # FastAPI backend (cases, evidence, playbooks)
-├── ui/                          # React investigator dashboard
 ├── database/                    # PostgreSQL init (pgcrypto, chain of custody)
 ├── docker/
 │   ├── claude-code.Dockerfile   # Containerized Claude Code client
@@ -670,7 +665,7 @@ dfireballz/
 - **No `shell=True`**: All subprocess calls in MCP servers use `subprocess.run(args_list, shell=False)` to prevent command injection.
 - **API key encryption**: Threat-intel API keys are stored encrypted via PostgreSQL pgcrypto.
 - **Non-root containers**: All MCP server containers run as non-root users with `no-new-privileges` security opt.
-- **Network isolation**: All containers communicate on the internal `dfireballz-net` bridge network. Only the orchestrator (8800) and UI (3000) expose ports to the host.
+- **Network isolation**: All containers communicate on the internal `dfireballz-net` bridge network. Only the orchestrator (8800) exposes a port to the host.
 
 ---
 
@@ -678,7 +673,7 @@ dfireballz/
 
 | Workflow | Trigger | Actions |
 |----------|---------|---------|
-| **CI** | Push/PR to main/develop | Package lint/test, orchestrator test, UI build, Docker build, Trivy scan |
+| **CI** | Push/PR to main/develop | Package lint/test, orchestrator test, Docker build, Trivy scan |
 | **Docker Build & Push** | Version tag (v*.*.*) | Build multi-arch, push to Docker Hub |
 | **CodeQL** | Push/PR to main + weekly | Static security analysis |
 | **Dependabot** | Weekly | Auto-update pip, npm, Docker, GitHub Actions dependencies |

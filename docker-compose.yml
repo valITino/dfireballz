@@ -196,21 +196,6 @@ services:
       - dfireballz-net
     restart: unless-stopped
 
-  ui:
-    image: crhacky/dfireballz:ui
-    build: ./ui
-    container_name: dfireballz-ui-1
-    security_opt:
-      - no-new-privileges:true
-    ports:
-      - "3000:3000"
-    depends_on:
-      orchestrator:
-        condition: service_healthy
-    networks:
-      - dfireballz-net
-    restart: unless-stopped
-
   # ─── Claude Code Container (--profile claude-code) ──────────────
 
   claude-code:
@@ -236,8 +221,8 @@ services:
       CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
       NODE_OPTIONS: "--max-old-space-size=4096"
       # Prevent proxy interference with internal Docker DNS names
-      no_proxy: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ui,ollama,mcpo,open-webui,localhost,127.0.0.1"
-      NO_PROXY: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ui,ollama,mcpo,open-webui,localhost,127.0.0.1"
+      no_proxy: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
+      NO_PROXY: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
     extra_hosts:
       # Block access to host services via Docker bridge (tintinweb pattern)
       - "host.docker.internal:127.0.0.1"

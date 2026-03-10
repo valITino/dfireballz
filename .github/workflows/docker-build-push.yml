@@ -68,10 +68,6 @@ jobs:
             context: ./orchestrator
             tag_prefix: "orchestrator-"
             scout: false
-          - service: ui
-            context: ./ui
-            tag_prefix: "ui-"
-            scout: false
           - service: db
             context: ./database
             tag_prefix: "db-"
