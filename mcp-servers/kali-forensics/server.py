@@ -6,14 +6,11 @@ import os
 import subprocess
 from pathlib import Path
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:
-    from fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "kali-forensics",
-    description=(
+    instructions=(
         "Kali Linux forensics: Volatility3, bulk_extractor, tshark, "
         "YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
     ),

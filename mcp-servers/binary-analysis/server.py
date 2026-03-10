@@ -9,14 +9,11 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:
-    from fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "binary-analysis",
-    description="Binary/malware: Ghidra headless, Radare2, Capa, YARA, pefile, entropy analysis",
+    instructions="Binary/malware: Ghidra headless, Radare2, Capa, YARA, pefile, entropy analysis",
 )
 
 EVIDENCE_DIR = Path("/evidence")

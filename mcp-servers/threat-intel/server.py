@@ -7,14 +7,11 @@ import os
 
 import requests
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:
-    from fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "threat-intel",
-    description="Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan",
+    instructions="Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan",
 )
 
 

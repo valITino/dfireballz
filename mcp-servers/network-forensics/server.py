@@ -4,14 +4,11 @@ import os
 import subprocess
 from pathlib import Path
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:
-    from fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "network-forensics",
-    description=(
+    instructions=(
         "Network: 18-tool Wireshark/tshark suite, tcpdump capture, "
         "PCAP split/merge/carve, threat detection"
     ),

@@ -2,14 +2,11 @@
 
 import subprocess
 
-try:
-    from mcp.server.fastmcp import FastMCP
-except ImportError:
-    from fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "osint",
-    description=(
+    instructions=(
         "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, "
         "theHarvester, DNSTwist, h8mail, subfinder"
     ),
