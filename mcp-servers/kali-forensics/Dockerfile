@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Python packages
 RUN pip3 install --break-system-packages --no-cache-dir \
-    fastmcp \
+    "fastmcp<3" \
     volatility3 \
     pyshark \
     yara-python \

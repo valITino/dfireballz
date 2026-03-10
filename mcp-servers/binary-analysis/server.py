@@ -9,7 +9,10 @@ import tempfile
 from collections import Counter
 from pathlib import Path
 
-from fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    from fastmcp import FastMCP
 
 mcp = FastMCP(
     "binary-analysis",

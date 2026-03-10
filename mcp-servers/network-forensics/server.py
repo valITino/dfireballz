@@ -4,7 +4,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from fastmcp import FastMCP
+try:
+    from mcp.server.fastmcp import FastMCP
+except ImportError:
+    from fastmcp import FastMCP
 
 mcp = FastMCP(
     "network-forensics",

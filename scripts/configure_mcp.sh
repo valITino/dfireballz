@@ -27,7 +27,7 @@ MCP_CONFIG='{
   "mcpServers": {
     "kali-forensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "/app/server.py"],
+      "args": ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-kali-forensics-1", "python3", "-u", "/app/server.py"],
       "description": "Kali forensics: Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
     },
     "winforensics": {
@@ -37,22 +37,22 @@ MCP_CONFIG='{
     },
     "osint": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-osint-1", "python3", "/app/server.py"],
+      "args": ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-osint-1", "python3", "-u", "/app/server.py"],
       "description": "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, theHarvester, DNSTwist, h8mail, subfinder"
     },
     "threat-intel": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-threat-intel-1", "python3", "/app/server.py"],
+      "args": ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-threat-intel-1", "python3", "-u", "/app/server.py"],
       "description": "Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan"
     },
     "binary-analysis": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "/app/server.py"],
+      "args": ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-binary-analysis-1", "python3", "-u", "/app/server.py"],
       "description": "Binary/malware: Ghidra headless, Radare2, Capa, YARA, pefile, entropy analysis"
     },
     "network-forensics": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-network-forensics-1", "python3", "/app/server.py"],
+      "args": ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-network-forensics-1", "python3", "-u", "/app/server.py"],
       "description": "Network: 18-tool Wireshark/tshark suite, tcpdump capture, PCAP split/merge/carve, threat detection"
     },
     "filesystem": {
@@ -74,7 +74,8 @@ case $MCP_HOST in
         echo "  make claude-code"
         echo ""
         echo "The containerized version waits for all MCP servers to be healthy"
-        echo "before starting.  Requires ANTHROPIC_API_KEY in .env."
+        echo "before starting.  Uses Anthropic account login by default."
+        echo "Set ANTHROPIC_API_KEY in .env only if you prefer API key auth."
         ;;
 
     claude-desktop)
@@ -101,22 +102,22 @@ case $MCP_HOST in
         MCPHOST_CONFIG='mcpServers:
   kali-forensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-kali-forensics-1", "python3", "/app/server.py"]
+    args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-kali-forensics-1", "python3", "-u", "/app/server.py"]
   winforensics:
     command: docker
     args: ["exec", "-i", "dfireballz-winforensics-1", "/app/winforensics-mcp/.venv/bin/python", "-m", "winforensics_mcp.server"]
   osint:
     command: docker
-    args: ["exec", "-i", "dfireballz-osint-1", "python3", "/app/server.py"]
+    args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-osint-1", "python3", "-u", "/app/server.py"]
   threat-intel:
     command: docker
-    args: ["exec", "-i", "dfireballz-threat-intel-1", "python3", "/app/server.py"]
+    args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-threat-intel-1", "python3", "-u", "/app/server.py"]
   binary-analysis:
     command: docker
-    args: ["exec", "-i", "dfireballz-binary-analysis-1", "python3", "/app/server.py"]
+    args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-binary-analysis-1", "python3", "-u", "/app/server.py"]
   network-forensics:
     command: docker
-    args: ["exec", "-i", "dfireballz-network-forensics-1", "python3", "/app/server.py"]
+    args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-network-forensics-1", "python3", "-u", "/app/server.py"]
   filesystem:
     command: docker
     args: ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"]'

@@ -11,7 +11,10 @@ services:
     healthcheck:
       start_period: 30s
       start_interval: 3s
+    environment:
+      PYTHONUNBUFFERED: "1"
     volumes:
+      - ./mcp-servers/kali-forensics/server.py:/app/server.py:ro
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
       - ./reports:/reports:ro
@@ -47,12 +50,14 @@ services:
     healthcheck:
       start_period: 15s
       start_interval: 3s
+    environment:
+      PYTHONUNBUFFERED: "1"
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      SHODAN_API_KEY: ${SHODAN_API_KEY:-}
     volumes:
+      - ./mcp-servers/osint/server.py:/app/server.py:ro
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
-    environment:
-      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
-      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -67,15 +72,17 @@ services:
     healthcheck:
       start_period: 15s
       start_interval: 3s
+    environment:
+      PYTHONUNBUFFERED: "1"
+      VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
+      SHODAN_API_KEY: ${SHODAN_API_KEY:-}
+      ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
+      URLSCAN_API_KEY: ${URLSCAN_API_KEY:-}
+      VULNCHECK_API_KEY: ${VULNCHECK_API_KEY:-}
     volumes:
+      - ./mcp-servers/threat-intel/server.py:/app/server.py:ro
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
-    environment:
-      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
-      - SHODAN_API_KEY=${SHODAN_API_KEY:-}
-      - ABUSEIPDB_API_KEY=${ABUSEIPDB_API_KEY:-}
-      - URLSCAN_API_KEY=${URLSCAN_API_KEY:-}
-      - VULNCHECK_API_KEY=${VULNCHECK_API_KEY:-}
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -90,7 +97,10 @@ services:
     healthcheck:
       start_period: 15s
       start_interval: 3s
+    environment:
+      PYTHONUNBUFFERED: "1"
     volumes:
+      - ./mcp-servers/binary-analysis/server.py:/app/server.py:ro
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
     networks:
@@ -107,7 +117,10 @@ services:
     healthcheck:
       start_period: 15s
       start_interval: 3s
+    environment:
+      PYTHONUNBUFFERED: "1"
     volumes:
+      - ./mcp-servers/network-forensics/server.py:/app/server.py:ro
       - ./cases:/cases:ro
       - ./evidence:/evidence:ro
       - ./reports:/reports:ro
@@ -194,6 +207,8 @@ services:
       - ./reports:/reports
       - ./playbooks:/app/playbooks:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    group_add:
+      - "${DOCKER_GID:-999}"
     depends_on:
       db:
         condition: service_healthy

@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Python OSINT packages
 # --ignore-installed avoids "Cannot uninstall multidict" from Debian-managed packages
 RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed \
-    fastmcp \
+    "fastmcp<3" \
     maigret \
     sherlock-project \
     holehe \
