@@ -5,6 +5,7 @@ services:
     image: crhacky/dfireballz:kali-forensics
     build: ./mcp-servers/kali-forensics
     container_name: dfireballz-kali-forensics-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -22,6 +23,7 @@ services:
     image: crhacky/dfireballz:winforensics
     build: ./mcp-servers/winforensics
     container_name: dfireballz-winforensics-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -39,6 +41,7 @@ services:
     image: crhacky/dfireballz:osint
     build: ./mcp-servers/osint
     container_name: dfireballz-osint-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -58,6 +61,7 @@ services:
     image: crhacky/dfireballz:threat-intel
     build: ./mcp-servers/threat-intel
     container_name: dfireballz-threat-intel-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -80,6 +84,7 @@ services:
     image: crhacky/dfireballz:binary-analysis
     build: ./mcp-servers/binary-analysis
     container_name: dfireballz-binary-analysis-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -96,6 +101,7 @@ services:
     image: crhacky/dfireballz:network-forensics
     build: ./mcp-servers/network-forensics
     container_name: dfireballz-network-forensics-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -116,6 +122,7 @@ services:
     image: crhacky/dfireballz:filesystem
     build: ./mcp-servers/filesystem
     container_name: dfireballz-filesystem-1
+    command: ["sleep", "infinity"]
     security_opt:
       - no-new-privileges:true
     healthcheck:

@@ -135,7 +135,7 @@ claude-code:
 	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
 		echo "ERROR: ANTHROPIC_API_KEY not set. Add it to .env or export it."; exit 1; fi
 	docker compose --profile claude-code pull --ignore-pull-failures
-	docker compose --profile claude-code run --rm --no-build claude-code
+	docker compose --profile claude-code run --rm claude-code
 
 stop down:
 	docker compose --profile claude-code --profile openwebui down
