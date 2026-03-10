@@ -99,7 +99,7 @@ echo "  cases/ evidence/ reports/ directories ready"
 echo ""
 
 # MCP Host selection
-echo "[4/6] MCP Host Configuration"
+echo "[4/7] MCP Host Configuration"
 echo "  Select your AI host:"
 echo "    1) Claude Code (recommended)"
 echo "    2) Claude Desktop"

@@ -13,7 +13,7 @@ Search the web for current, accurate information relevant to the task. The MCP e
 
 **Phase 2: Full Codebase Review**
 Read the following before writing a single line:
-- `CLAUDE.md` (this file), `README.md`, `DFIREBALLZ_CLAUDE_CODE_PROMPT.md` (source of truth)
+- `CLAUDE.md` (this file), `README.md`
 - `docker-compose.yml`, `Makefile`, `.env.example`
 - Every file directly relevant to the task: `Dockerfile`, `server.py`, `init.sql`, workflow files — whatever applies
 - Do not rely on memory from previous sessions. Read the actual current files.

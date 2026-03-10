@@ -131,10 +131,15 @@ class CaseManager:
         md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
         sha1 = hashlib.sha1(content, usedforsecurity=False).hexdigest()
 
-        # Save to evidence directory
+        # Save to evidence directory (sanitize filename to prevent path traversal)
         evidence_dir = EVIDENCE_DIR / case["case_number"]
         evidence_dir.mkdir(parents=True, exist_ok=True)
-        filepath = evidence_dir / file.filename
+        safe_name = Path(file.filename).name  # Strip any directory components
+        if not safe_name or safe_name in (".", ".."):
+            raise ValueError(f"Invalid filename: {file.filename}")
+        filepath = evidence_dir / safe_name
+        if not filepath.resolve().is_relative_to(evidence_dir.resolve()):
+            raise ValueError(f"Invalid filename: {file.filename}")
         with open(filepath, "wb") as f:
             f.write(content)
 
@@ -147,7 +152,7 @@ class CaseManager:
                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                    RETURNING *""",
                 uuid.UUID(case_id),
-                file.filename,
+                safe_name,
                 str(filepath),
                 file.content_type,
                 sha256,
@@ -169,7 +174,7 @@ class CaseManager:
                 "system",
                 "DFIReballz Upload",
                 sha256,
-                f"Evidence uploaded: {file.filename} (SHA256: {sha256})",
+                f"Evidence uploaded: {safe_name} (SHA256: {sha256})",
             )
 
             return dict(row)

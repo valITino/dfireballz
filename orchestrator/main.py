@@ -6,6 +6,8 @@ from uuid import UUID
 
 import redis.asyncio as redis
 from case_manager import CaseManager
+from typing import Any
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from playbook_runner import PlaybookRunner
@@ -87,7 +89,7 @@ class PlaybookRun(BaseModel):
 
 
 @app.get("/health")
-async def health():
+async def health() -> dict[str, Any]:
     """Service health check."""
     health_status = {"status": "healthy", "services": {}}
     try:
@@ -107,19 +109,19 @@ async def health():
 
 
 @app.post("/cases")
-async def create_case(case: CaseCreate):
+async def create_case(case: CaseCreate) -> dict[str, Any]:
     """Create a new investigation case."""
     return await app.state.case_manager.create_case(case.model_dump())
 
 
 @app.get("/cases")
-async def list_cases(status: str | None = None, case_type: str | None = None):
+async def list_cases(status: str | None = None, case_type: str | None = None) -> list[dict[str, Any]]:
     """List all cases, optionally filtered."""
     return await app.state.case_manager.list_cases(status=status, case_type=case_type)
 
 
 @app.get("/cases/{case_id}")
-async def get_case(case_id: UUID):
+async def get_case(case_id: UUID) -> dict[str, Any]:
     """Get case details."""
     case = await app.state.case_manager.get_case(str(case_id))
     if not case:
@@ -128,7 +130,7 @@ async def get_case(case_id: UUID):
 
 
 @app.put("/cases/{case_id}")
-async def update_case(case_id: UUID, updates: CaseUpdate):
+async def update_case(case_id: UUID, updates: CaseUpdate) -> dict[str, Any]:
     """Update case details."""
     result = await app.state.case_manager.update_case(
         str(case_id), updates.model_dump(exclude_none=True)
@@ -142,13 +144,13 @@ async def update_case(case_id: UUID, updates: CaseUpdate):
 
 
 @app.post("/cases/{case_id}/evidence")
-async def upload_evidence(case_id: UUID, file: UploadFile = File(...)):  # noqa: B008
+async def upload_evidence(case_id: UUID, file: UploadFile = File(...)) -> dict[str, Any]:  # noqa: B008
     """Upload evidence file — auto-hashes and creates CoC entry."""
     return await app.state.case_manager.add_evidence(str(case_id), file)
 
 
 @app.get("/cases/{case_id}/evidence")
-async def list_evidence(case_id: UUID):
+async def list_evidence(case_id: UUID) -> list[dict[str, Any]]:
     """List all evidence for a case."""
     return await app.state.case_manager.list_evidence(str(case_id))
 
@@ -157,13 +159,13 @@ async def list_evidence(case_id: UUID):
 
 
 @app.get("/cases/{case_id}/iocs")
-async def list_iocs(case_id: UUID):
+async def list_iocs(case_id: UUID) -> list[dict[str, Any]]:
     """List IOCs for a case."""
     return await app.state.case_manager.list_iocs(str(case_id))
 
 
 @app.post("/cases/{case_id}/iocs")
-async def add_ioc(case_id: UUID, ioc: IOCCreate):
+async def add_ioc(case_id: UUID, ioc: IOCCreate) -> dict[str, Any]:
     """Add an IOC manually."""
     return await app.state.case_manager.add_ioc(str(case_id), ioc.model_dump())
 
@@ -172,7 +174,7 @@ async def add_ioc(case_id: UUID, ioc: IOCCreate):
 
 
 @app.get("/cases/{case_id}/findings")
-async def list_findings(case_id: UUID):
+async def list_findings(case_id: UUID) -> list[dict[str, Any]]:
     """List findings for a case."""
     return await app.state.case_manager.list_findings(str(case_id))
 
@@ -181,21 +183,19 @@ async def list_findings(case_id: UUID):
 
 
 @app.get("/playbooks")
-async def list_playbooks():
+async def list_playbooks() -> list[dict[str, Any]]:
     """List available investigation playbooks."""
     return app.state.playbook_runner.list_playbooks()
 
 
 @app.post("/cases/{case_id}/playbooks/run")
-async def run_playbook(case_id: UUID, run: PlaybookRun):
+async def run_playbook(case_id: UUID, run: PlaybookRun) -> dict[str, Any]:
     """Launch a playbook against a case."""
-    return await app.state.playbook_runner.run(
-        str(case_id), run.playbook_name, run.evidence_id
-    )
+    return await app.state.playbook_runner.run(str(case_id), run.playbook_name)
 
 
 @app.get("/cases/{case_id}/playbooks")
-async def list_playbook_runs(case_id: UUID):
+async def list_playbook_runs(case_id: UUID) -> list[dict[str, Any]]:
     """List playbook runs for a case."""
     return await app.state.case_manager.list_playbook_runs(str(case_id))
 
@@ -204,15 +204,15 @@ async def list_playbook_runs(case_id: UUID):
 
 
 @app.get("/cases/{case_id}/report")
-async def generate_report(case_id: UUID, format: str = "markdown"):
+async def generate_report(case_id: UUID, format: str = "markdown") -> dict[str, Any]:
     """Generate investigation report."""
     return await app.state.report_generator.generate(str(case_id), format)
 
 
 # ─── Settings ────────────────────────────────────────────────────────
 
-# API keys that can be configured via the UI.
-# Maps UI key name → environment variable name.
+# API keys that can be configured via the settings API.
+# Maps service name → environment variable name.
 _API_KEY_ENV_MAP: dict[str, str] = {
     "virustotal": "VIRUSTOTAL_API_KEY",
     "shodan": "SHODAN_API_KEY",
@@ -236,7 +236,7 @@ class SettingsUpdate(BaseModel):
 
 
 @app.get("/settings")
-async def get_settings():
+async def get_settings() -> dict[str, Any]:
     """Return current settings including which API keys are configured."""
     api_keys_status: dict[str, dict[str, str | bool]] = {}
     for ui_name, env_var in _API_KEY_ENV_MAP.items():
@@ -254,7 +254,7 @@ async def get_settings():
 
 
 @app.post("/settings")
-async def update_settings(settings: SettingsUpdate):
+async def update_settings(settings: SettingsUpdate) -> dict[str, Any]:
     """Update API keys in the running environment.
 
     Note: This updates the current process environment. To persist across
@@ -277,7 +277,7 @@ async def update_settings(settings: SettingsUpdate):
 
 
 @app.get("/settings/mcp-status")
-async def mcp_status():
+async def mcp_status() -> dict[str, Any]:
     """Health check all MCP server containers."""
     import subprocess
 

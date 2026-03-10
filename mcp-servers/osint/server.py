@@ -150,8 +150,9 @@ def passive_dns(ip_or_domain: str) -> dict:
     # DNS lookups
     results["dig"] = _run(["dig", "+short", ip_or_domain], timeout=15)
     results["dig_any"] = _run(["dig", "ANY", "+short", ip_or_domain], timeout=15)
-    # Reverse DNS if IP
-    if any(c.isdigit() for c in ip_or_domain.split(".")[0]):
+    # Reverse DNS if IP address
+    parts = ip_or_domain.split(".")
+    if len(parts) == 4 and all(p.isdigit() and 0 <= int(p) <= 255 for p in parts):
         results["reverse"] = _run(["dig", "+short", "-x", ip_or_domain], timeout=15)
     return results
 
