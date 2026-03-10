@@ -6,6 +6,7 @@ VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan.
 import os
 
 import requests
+
 try:
     from mcp.server.fastmcp import FastMCP
 except ImportError:
