@@ -6,7 +6,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP(
     "osint",
-    description=(
+    instructions=(
         "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, "
         "theHarvester, DNSTwist, h8mail, subfinder"
     ),

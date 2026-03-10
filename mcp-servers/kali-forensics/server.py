@@ -10,7 +10,7 @@ from fastmcp import FastMCP
 
 mcp = FastMCP(
     "kali-forensics",
-    description=(
+    instructions=(
         "Kali Linux forensics: Volatility3, bulk_extractor, tshark, "
         "YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
     ),

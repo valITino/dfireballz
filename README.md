@@ -127,6 +127,7 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 - **Docker** 25+ with Docker Compose v2
 - **RAM:** 16 GB recommended (8 GB absolute minimum, limited functionality)
 - **Disk:** 50 GB+ recommended (Docker images are large)
+- **Docker GID:** The orchestrator and Claude Code containers need access to `/var/run/docker.sock`. Verify your Docker group ID matches `DOCKER_GID` in `.env` (default 999). Run `getent group docker | cut -d: -f3` to check.
 - **Optional:** NVIDIA GPU + [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) for GPU-accelerated inference with Ollama
 
 ### Required Accounts (Free Tiers Available)
@@ -386,7 +387,7 @@ STEP 2: AI DECIDES WHICH TOOLS TO USE
         |
         v
 STEP 3: TOOLS EXECUTE IN DOCKER CONTAINERS
-  AI host runs: docker exec -i dfireballz-kali-forensics-1 python server.py
+  AI host runs: docker exec -i -e PYTHONUNBUFFERED=1 dfireballz-kali-forensics-1 python3 -u /app/server.py
   Each tool runs inside its container and returns structured output via stdio.
         |
         v
@@ -526,6 +527,17 @@ Common causes:
 - Insufficient memory (16 GB recommended)
 - Port conflict on the host (8800)
 - Missing or invalid `.env` configuration
+
+### MCP servers show "failed" in Claude Code `/mcp`
+
+If `make health` shows all containers as healthy but Claude Code's `/mcp` shows servers as failed:
+
+1. **Check Docker GID:** Run `getent group docker | cut -d: -f3` and ensure it matches `DOCKER_GID` in `.env` (default 999)
+2. **Restart containers:** `make restart` — picks up volume-mounted server.py changes and environment variables
+3. **Run with debug:** `claude --debug` — shows actual MCP connection error logs
+4. **Rebuild images** (if all else fails): `make build && make restart` — rebuilds with pinned `fastmcp<3`
+
+The MCP servers use `PYTHONUNBUFFERED=1` and `python3 -u` to ensure unbuffered stdio transport. Server code is volume-mounted from `./mcp-servers/<name>/server.py`, so local edits take effect on container restart without rebuilding images.
 
 ### SessionStart hook reports issues
 

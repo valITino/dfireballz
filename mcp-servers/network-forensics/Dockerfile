@@ -16,7 +16,7 @@ RUN setcap cap_net_raw,cap_net_admin+eip /usr/bin/dumpcap || true
 
 # Python packages
 RUN pip install --no-cache-dir \
-    fastmcp \
+    "fastmcp<3" \
     pyshark \
     scapy
 

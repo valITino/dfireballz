@@ -32,7 +32,7 @@ RUN wget -q "https://github.com/mandiant/capa/releases/latest/download/capa-linu
 
 # Python packages
 RUN pip install --no-cache-dir \
-    fastmcp \
+    "fastmcp<3" \
     yara-python \
     pefile \
     python-magic \

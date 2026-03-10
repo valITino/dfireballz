@@ -6,11 +6,12 @@ VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan.
 import os
 
 import requests
+
 from fastmcp import FastMCP
 
 mcp = FastMCP(
     "threat-intel",
-    description="Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan",
+    instructions="Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan",
 )
 
 
