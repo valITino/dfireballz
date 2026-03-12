@@ -18,9 +18,11 @@ WARN="${YELLOW}WARN${NC}"
 MAX_RETRIES=20
 RETRY_INTERVAL=3
 
+# Bypass proxy for internal Docker hostnames
+export no_proxy="kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
+export NO_PROXY="$no_proxy"
+
 # MCP servers to verify — name:container:test_cmd triples.
-# Each container must be running AND respond to a docker exec probe
-# before Claude Code starts, ensuring all MCP tools are reachable.
 MCP_SERVERS=(
   "kali-forensics:dfireballz-kali-forensics-1:python3 -c 'import fastmcp; print(\"ok\")'"
   "winforensics:dfireballz-winforensics-1:/app/winforensics-mcp/.venv/bin/python -c 'import winforensics_mcp; print(\"ok\")'"
@@ -42,67 +44,42 @@ print_banner() {
   echo ""
 }
 
-# Tier 1: Check container is running via docker inspect.
-check_container_running() {
-  local container="$1"
-  local status
-  status=$(docker inspect --format='{{.State.Status}}' "$container" 2>/dev/null) || return 1
-  [ "$status" = "running" ]
-}
-
-# Tier 2: Verify stdio connectivity via docker exec (like blhackbox's
-# curl health probes, but adapted for stdio transport).
-check_container_responsive() {
+check_service() {
   local container="$1"
   local test_cmd="$2"
   docker exec "$container" sh -c "$test_cmd" >/dev/null 2>&1
 }
 
-# Two-tier wait: first check running, then verify exec responsiveness.
-wait_for_container() {
+wait_for_service() {
   local name="$1"
   local container="$2"
   local test_cmd="$3"
-  local retries="${4:-$MAX_RETRIES}"
+  local optional="${4:-false}"
 
   printf "  %-24s " "$name"
 
-  # Tier 1: Wait for container to be running
-  local running=false
-  for i in $(seq 1 "$retries"); do
-    if check_container_running "$container"; then
-      running=true
-      break
+  for i in $(seq 1 "$MAX_RETRIES"); do
+    if check_service "$container" "$test_cmd"; then
+      echo -e "[ ${CHECK} ]"
+      return 0
     fi
     sleep "$RETRY_INTERVAL"
   done
 
-  if ! $running; then
-    echo -e "[ ${CROSS} ] (container not running)"
-    return 1
+  if [ "$optional" = "true" ]; then
+    echo -e "[ ${WARN} ] (optional — skipped)"
+  else
+    echo -e "[ ${CROSS} ]"
   fi
-
-  # Tier 2: Verify docker exec connectivity (3 attempts)
-  for attempt in 1 2 3; do
-    if check_container_responsive "$container" "$test_cmd"; then
-      echo -e "[ ${CHECK} ]"
-      return 0
-    fi
-    sleep 2
-  done
-
-  # Container running but exec probe failed — still usable, warn only
-  echo -e "[ ${WARN} ] (running, exec probe failed)"
-  return 0
+  return 1
 }
 
 # ── Main ────────────────────────────────────────────────────────────
 
 print_banner
 
-echo -e "${BOLD}Verifying MCP server containers (two-tier check)...${NC}"
-echo -e "${DIM}Tier 1: docker inspect (running?)  Tier 2: docker exec (responsive?)${NC}"
-echo -e "${DIM}Waiting up to $((MAX_RETRIES * RETRY_INTERVAL))s for each service.${NC}"
+echo -e "${BOLD}Checking MCP server containers (via docker exec)...${NC}"
+echo -e "${DIM}Waiting up to $((MAX_RETRIES * RETRY_INTERVAL))s per service.${NC}"
 echo ""
 
 OK_COUNT=0
@@ -111,7 +88,7 @@ FAIL_COUNT=0
 echo -e "  ${BOLD}MCP Servers (stdio via docker exec)${NC}"
 for entry in "${MCP_SERVERS[@]}"; do
   IFS=':' read -r name container test_cmd <<< "$entry"
-  if wait_for_container "$name" "$container" "$test_cmd"; then
+  if wait_for_service "$name" "$container" "$test_cmd"; then
     OK_COUNT=$((OK_COUNT + 1))
   else
     FAIL_COUNT=$((FAIL_COUNT + 1))
@@ -126,7 +103,6 @@ if [ "$FAIL_COUNT" -eq 0 ]; then
 else
   echo -e "${YELLOW}${BOLD}  $OK_COUNT/$((OK_COUNT + FAIL_COUNT)) MCP servers verified. $FAIL_COUNT unreachable.${NC}"
   echo -e "${DIM}  Claude Code will start — unreachable servers show as 'failed' in /mcp.${NC}"
-  echo -e "${DIM}  Use 'docker compose ps' in another terminal to check container health.${NC}"
 fi
 
 echo ""
@@ -145,39 +121,6 @@ echo -e "  ${CYAN}/mcp${NC}                          ${DIM}Check MCP server stat
 echo -e "  ${CYAN}Analyze the memory dump in /evidence${NC}"
 echo -e "  ${CYAN}Run a full OSINT sweep on user@example.com${NC}"
 echo -e "${DIM}──────────────────────────────────────────────────────${NC}"
-echo ""
-
-# ── Auth method detection ──────────────────────────────────────
-# Check for persisted account login (OAuth) in the claude-config volume
-HAS_ACCOUNT_AUTH=false
-if [ -d "$HOME/.claude" ] && [ -n "$(find "$HOME/.claude" -name '*.json' -newer /proc/1/cmdline 2>/dev/null || find "$HOME/.claude" -name '*.json' 2>/dev/null)" ]; then
-  HAS_ACCOUNT_AUTH=true
-fi
-
-# Unset ANTHROPIC_API_KEY if it's empty — an empty string causes Claude Code
-# to attempt API auth (and fail) instead of falling through to OAuth login.
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  unset ANTHROPIC_API_KEY
-fi
-
-if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-  echo -e "  ${BOLD}Auth:${NC} ${GREEN}API key${NC} ${DIM}(from ANTHROPIC_API_KEY env var)${NC}"
-elif $HAS_ACCOUNT_AUTH; then
-  echo -e "  ${BOLD}Auth:${NC} ${GREEN}Account login${NC} ${DIM}(persisted in claude-config volume)${NC}"
-else
-  echo -e "  ${BOLD}Auth:${NC} ${RED}Not configured${NC}"
-  echo ""
-  echo -e "  ${YELLOW}NOTE:${NC} OAuth login inside Docker containers is unreliable."
-  echo -e "  ${DIM}It may show 'Not logged in' even after a successful login prompt.${NC}"
-  echo ""
-  echo -e "  ${BOLD}Recommended: use API key auth instead.${NC}"
-  echo -e "  ${DIM}Exit this container (Ctrl+C) and run:${NC}"
-  echo ""
-  echo -e "    ${CYAN}make setup-api-key${NC}    ${DIM}# interactive — prompts for your key${NC}"
-  echo -e "    ${CYAN}make claude-code${NC}      ${DIM}# restart with API key auth${NC}"
-  echo ""
-  echo -e "  ${DIM}Get your key at: https://console.anthropic.com/settings/keys${NC}"
-fi
 echo ""
 
 exec claude "$@"
