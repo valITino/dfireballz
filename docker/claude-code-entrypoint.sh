@@ -165,11 +165,18 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
 elif $HAS_ACCOUNT_AUTH; then
   echo -e "  ${BOLD}Auth:${NC} ${GREEN}Account login${NC} ${DIM}(persisted in claude-config volume)${NC}"
 else
-  echo -e "  ${BOLD}Auth:${NC} ${YELLOW}Not configured${NC}"
-  echo -e "  ${DIM}Claude Code will prompt you to log in via your Anthropic account.${NC}"
-  echo -e "  ${DIM}Your login is persisted across restarts in the claude-config volume.${NC}"
+  echo -e "  ${BOLD}Auth:${NC} ${RED}Not configured${NC}"
   echo ""
-  echo -e "  ${DIM}Alternatively, set ANTHROPIC_API_KEY in .env to use an API key.${NC}"
+  echo -e "  ${YELLOW}NOTE:${NC} OAuth login inside Docker containers is unreliable."
+  echo -e "  ${DIM}It may show 'Not logged in' even after a successful login prompt.${NC}"
+  echo ""
+  echo -e "  ${BOLD}Recommended: use API key auth instead.${NC}"
+  echo -e "  ${DIM}Exit this container (Ctrl+C) and run:${NC}"
+  echo ""
+  echo -e "    ${CYAN}make setup-api-key${NC}    ${DIM}# interactive — prompts for your key${NC}"
+  echo -e "    ${CYAN}make claude-code${NC}      ${DIM}# restart with API key auth${NC}"
+  echo ""
+  echo -e "  ${DIM}Get your key at: https://console.anthropic.com/settings/keys${NC}"
 fi
 echo ""
 

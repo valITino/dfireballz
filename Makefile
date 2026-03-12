@@ -11,7 +11,7 @@ INFRA := db redis orchestrator
         dev test test-unit test-pkg test-smoke test-security lint format typecheck audit \
         shell-kali shell-osint shell-netforensics shell-winforensics shell-binary shell-threat \
         shell-filesystem shell-orchestrator \
-        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code \
+        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code setup-api-key \
         mcp-health-check up down ps health nuke push-all report version \
         log-kali log-osint log-netforensics log-winforensics log-binary log-threat \
         log-filesystem log-orchestrator log-db log-redis \
@@ -38,6 +38,7 @@ help:
 	@echo "    make start / make up    — Start all services (detached)"
 	@echo "    make start-openwebui    — Start with Open WebUI + Ollama"
 	@echo "    make claude-code        — Run Claude Code in Docker (interactive)"
+	@echo "    make setup-api-key      — Configure Anthropic API key for Claude Code"
 	@echo "    make stop / make down   — Stop all services"
 	@echo "    make restart            — Restart all services"
 	@echo "    make status / make ps   — Show container health status"
@@ -131,15 +132,60 @@ start-openwebui:
 	@echo "  Open WebUI: http://localhost:8080"
 	@echo "  mcpo API bridge: http://localhost:8812"
 
+setup-api-key:
+	@echo ""
+	@echo "  ╔══════════════════════════════════════════════════╗"
+	@echo "  ║     Set up Anthropic API Key for Claude Code     ║"
+	@echo "  ╚══════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "  Get your API key at: https://console.anthropic.com/settings/keys"
+	@echo ""
+	@if [ ! -f .env ]; then \
+		echo "  No .env file found — creating from config/.env.example..."; \
+		cp config/.env.example .env; \
+		echo "  Created .env"; \
+		echo ""; \
+	fi
+	@read -rp "  Paste your Anthropic API key: " key; \
+	if [ -z "$$key" ]; then \
+		echo ""; \
+		echo "  No key entered — aborting."; \
+		echo ""; \
+		exit 1; \
+	fi; \
+	if grep -q '^ANTHROPIC_API_KEY=' .env 2>/dev/null; then \
+		sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$$key|" .env; \
+	elif grep -q '^# ANTHROPIC_API_KEY=' .env 2>/dev/null; then \
+		sed -i "s|^# ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$$key|" .env; \
+	else \
+		echo "" >> .env; \
+		echo "ANTHROPIC_API_KEY=$$key" >> .env; \
+	fi; \
+	echo ""; \
+	echo "  API key saved to .env"; \
+	echo "  Run 'make claude-code' to start Claude Code."; \
+	echo ""
+
 claude-code:
 	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
 		echo ""; \
-		echo "  ℹ️  No ANTHROPIC_API_KEY found — Claude Code will prompt you to log in"; \
-		echo "     via your Anthropic account (recommended)."; \
+		echo "  ⚠️  No ANTHROPIC_API_KEY found."; \
 		echo ""; \
-		echo "     To use an API key instead, set ANTHROPIC_API_KEY in .env"; \
-		echo "     or export it before running this command."; \
+		echo "     API key auth is required for Claude Code in Docker."; \
+		echo "     (OAuth login inside containers is unreliable and may"; \
+		echo "      show 'Not logged in' even after successful login.)"; \
 		echo ""; \
+		echo "     Quick setup:"; \
+		echo "       make setup-api-key"; \
+		echo ""; \
+		echo "     Or export directly:"; \
+		echo "       export ANTHROPIC_API_KEY=sk-ant-..."; \
+		echo "       make claude-code"; \
+		echo ""; \
+		echo "     Get your key at: https://console.anthropic.com/settings/keys"; \
+		echo ""; \
+		read -rp "  Continue without API key anyway? [y/N] " yn; \
+		case "$$yn" in [yY]*) ;; *) exit 1 ;; esac; \
 	fi
 	docker compose --profile claude-code pull --ignore-pull-failures
 	docker compose --profile claude-code run --rm claude-code
