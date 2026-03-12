@@ -17,7 +17,7 @@ fi
 
 # Load .env if present (for DB, API keys, etc.)
 # API keys (ANTHROPIC_API_KEY) are intentionally commented out in .env.example
-# — Claude Code provides its own authentication.
+# — Claude Code provides its own authentication via OAuth.
 if [ -f ".env" ]; then
   set -a
   # shellcheck disable=SC1091
