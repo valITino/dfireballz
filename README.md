@@ -230,9 +230,8 @@ Claude Code will autonomously:
 
 ### What's in the container
 
-- `tini` for proper signal handling (clean `docker stop`)
 - DNS configured for reliable Anthropic API access
-- `CLAUDE.md` mounted read-only at `/workspace` for project context
+- Docker CLI for stdio transport to MCP containers via `docker exec`
 - Evidence mounted read-only for chain-of-custody compliance
 - Reports and results exported to host via bind mounts
 
