@@ -151,13 +151,15 @@ if [ -n "$URLSCAN_KEY" ]; then
     sed -i "s|URLSCAN_API_KEY=|URLSCAN_API_KEY=${URLSCAN_KEY}|" .env
 fi
 
-# Anthropic API key (needed for Claude Code Docker container)
+# Anthropic API key (required for Claude Code Docker container)
 echo ""
-echo "  If you plan to use Claude Code in Docker (make claude-code),"
-echo "  you need an Anthropic API key:"
+echo "  Claude Code in Docker requires an API key (OAuth login is unreliable"
+echo "  inside containers). Get one at:"
 echo "    https://console.anthropic.com/settings/keys"
 echo ""
-read -rp "  Anthropic API Key (for Claude Code container, optional): " ANTHROPIC_KEY
+echo "  You can also set this later with: make setup-api-key"
+echo ""
+read -rp "  Anthropic API Key (required for 'make claude-code'): " ANTHROPIC_KEY
 if [ -n "$ANTHROPIC_KEY" ]; then
     # Append to .env if not present, or update existing
     if grep -q '^ANTHROPIC_API_KEY=' .env; then
