@@ -13,7 +13,7 @@ ENV NODE_ENV=production \
     npm_config_loglevel=error
 
 # Install Claude Code CLI and clean npm cache
-RUN npm install -g @anthropic-ai/claude-code \
+RUN npm install -g @anthropic-ai/claude-code@2.1.71 \
     && npm cache clean --force
 
 # Runtime utilities: curl for health checks, jq for JSON, docker-cli
