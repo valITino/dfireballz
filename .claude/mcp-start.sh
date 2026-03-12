@@ -23,6 +23,11 @@ if [ -f ".env" ]; then
   # shellcheck disable=SC1091
   source .env
   set +a
+  # Unset ANTHROPIC_API_KEY if empty — an empty value can force Claude Code
+  # into "API Usage Billing" mode, overriding account-based authentication.
+  if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    unset ANTHROPIC_API_KEY 2>/dev/null || true
+  fi
 fi
 
 exec .venv/bin/dfireballz mcp
