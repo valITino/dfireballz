@@ -154,6 +154,12 @@ if [ -d "$HOME/.claude" ] && [ -n "$(find "$HOME/.claude" -name '*.json' -newer 
   HAS_ACCOUNT_AUTH=true
 fi
 
+# Unset ANTHROPIC_API_KEY if it's empty — an empty string causes Claude Code
+# to attempt API auth (and fail) instead of falling through to OAuth login.
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  unset ANTHROPIC_API_KEY
+fi
+
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   echo -e "  ${BOLD}Auth:${NC} ${GREEN}API key${NC} ${DIM}(from ANTHROPIC_API_KEY env var)${NC}"
 elif $HAS_ACCOUNT_AUTH; then

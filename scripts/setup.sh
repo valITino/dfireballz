@@ -162,6 +162,8 @@ if [ -n "$ANTHROPIC_KEY" ]; then
     # Append to .env if not present, or update existing
     if grep -q '^ANTHROPIC_API_KEY=' .env; then
         sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
+    elif grep -q '^# ANTHROPIC_API_KEY=' .env; then
+        sed -i "s|^# ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
     else
         echo "" >> .env
         echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
