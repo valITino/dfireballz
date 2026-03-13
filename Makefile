@@ -116,7 +116,6 @@ install-dev:
 
 start up:
 	@mkdir -p cases evidence reports results output/findings output/screenshots output/logs output/exports output/timelines
-	docker compose pull --ignore-pull-failures
 	docker compose up -d --no-build
 	@echo ""
 	@echo "  Waiting for containers to become healthy..."
@@ -132,7 +131,7 @@ start up:
 	@echo "    ./output/    — Investigation output (findings, screenshots, logs)"
 
 start-openwebui:
-	docker compose --profile openwebui pull --ignore-pull-failures
+	docker compose --profile openwebui pull
 	docker compose --profile openwebui up -d --no-build
 	@echo ""
 	@echo "  DFIReballz + Open WebUI + Ollama running"
@@ -203,7 +202,7 @@ claude-code:
 		read -rp "  Continue with interactive login? [Y/n] " yn; \
 		case "$$yn" in [nN]*) exit 1 ;; esac; \
 	fi
-	docker compose --profile claude-code pull --ignore-pull-failures
+	docker compose pull claude-code
 	docker compose --profile claude-code run --rm claude-code
 
 stop down:
