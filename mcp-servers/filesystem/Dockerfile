@@ -2,12 +2,12 @@ FROM node:20-alpine
 
 RUN npm install -g @modelcontextprotocol/server-filesystem
 
-# Non-root user
-RUN adduser -D -s /bin/sh investigator
-RUN mkdir -p /cases /evidence /reports && \
-    chown -R investigator:investigator /cases /evidence /reports
+# Create mount-point directories (ownership set via bind mounts at runtime)
+RUN mkdir -p /cases /evidence /reports
 
-USER investigator
+# Run as 'node' user (UID 1000 — matches most host users for bind mounts)
+# The MCP server itself enforces directory scoping; no additional OS-level restriction needed
+USER node
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD node -e "console.log('ok')" || exit 1

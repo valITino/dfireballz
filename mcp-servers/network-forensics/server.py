@@ -42,7 +42,8 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
     if allowed_dirs is None:
         allowed_dirs = [EVIDENCE_DIR, CASES_DIR, REPORTS_DIR]
     for d in allowed_dirs:
-        if str(resolved).startswith(str(d.resolve())):
+        d_resolved = d.resolve()
+        if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved
     raise ValueError(f"Path {path} is outside allowed directories")
 
@@ -57,7 +58,8 @@ def wireshark_system_info(info_type: str = "interfaces") -> dict:
     if info_type == "interfaces":
         return _run(["tshark", "-D"])
     elif info_type == "capabilities":
-        return _run(["tshark", "-v"])
+        # Show per-interface capture capabilities (distinct from version)
+        return _run(["dumpcap", "-L"])
     elif info_type == "version":
         return _run(["tshark", "--version"])
     return {"error": f"Unknown info_type: {info_type}"}
@@ -201,6 +203,7 @@ def wireshark_export_objects(
     """
     path = _validate_path(filepath)
     out_dir = output_dir or f"/cases/exported_{path.stem}_{protocol}"
+    _validate_path(out_dir, [CASES_DIR, REPORTS_DIR])
     os.makedirs(out_dir, exist_ok=True)
     return _run(["tshark", "-r", str(path), "--export-objects", f"{protocol},{out_dir}"])
 
@@ -222,6 +225,7 @@ def wireshark_split_pcap(
     """
     path = _validate_path(filepath)
     out = output_dir or f"/cases/split_{path.stem}"
+    _validate_path(out, [CASES_DIR, REPORTS_DIR])
     os.makedirs(out, exist_ok=True)
 
     split_flags = {
@@ -302,35 +306,77 @@ def wireshark_generate_filter(description: str, complexity: str = "basic") -> di
         complexity: Filter complexity — basic | intermediate | advanced
     """
     filter_map = {
+        "http": "http",
         "http traffic": "http",
+        "web traffic": "http",
+        "dns": "dns",
         "dns queries": "dns",
+        "dns query": "dns",
+        "tls": "tls",
+        "tls handshake": "tls.handshake",
         "tls handshakes": "tls.handshake",
+        "ssl": "tls",
         "ssh": "ssh",
         "smtp": "smtp",
+        "email": "smtp or pop or imap",
         "ftp": "ftp",
+        "icmp": "icmp",
+        "ping": "icmp",
+        "arp": "arp",
+        "tcp": "tcp",
+        "udp": "udp",
+        "syn scan": "tcp.flags.syn==1 && tcp.flags.ack==0",
         "syn scans": "tcp.flags.syn==1 && tcp.flags.ack==0",
+        "port scan": "tcp.flags.syn==1 && tcp.flags.ack==0",
+        "cleartext password": "http.authorization or ftp.request.command==PASS",
         "cleartext passwords": "http.authorization or ftp.request.command==PASS",
+        "credentials": "http.authorization or ftp.request.command==PASS or smtp.req.parameter",
         "dns tunneling": 'dns.qry.name matches "^.{50,}"',
+        "dns tunnel": 'dns.qry.name matches "^.{50,}"',
         "c2 beaconing": "tcp.flags.syn==1 && tcp.flags.ack==0",
+        "c2": "tcp.flags.syn==1 && tcp.flags.ack==0",
+        "beaconing": "tcp.flags.syn==1 && tcp.flags.ack==0",
+        "malware callback": (
+            "http.request && !(http.host matches "
+            '"(google|microsoft|apple|amazon)")'
+        ),
         "malware callbacks": (
             "http.request && !(http.host matches "
-            "\"(google|microsoft|apple|amazon)\")"
+            '"(google|microsoft|apple|amazon)")'
         ),
+        "suspicious port": "tcp.port==4444 or tcp.port==1337 or tcp.port==31337 or tcp.port==8888",
+        "suspicious ports": "tcp.port==4444 or tcp.port==1337 or tcp.port==31337 or tcp.port==8888",
     }
 
-    desc_lower = description.lower()
+    desc_lower = description.lower().strip()
+
+    # Try exact match first
+    if desc_lower in filter_map:
+        return {
+            "filter": filter_map[desc_lower],
+            "description": description,
+            "note": "Generated from pattern matching",
+        }
+
+    # Try substring match (longest match wins)
+    best_match = ""
+    best_filter = ""
     for key, filter_str in filter_map.items():
-        if key in desc_lower:
-            return {
-                "filter": filter_str,
-                "description": description,
-                "note": "Generated from pattern matching",
-            }
+        if key in desc_lower and len(key) > len(best_match):
+            best_match = key
+            best_filter = filter_str
+
+    if best_filter:
+        return {
+            "filter": best_filter,
+            "description": description,
+            "note": f"Generated from pattern match on '{best_match}'",
+        }
 
     return {
         "filter": description,
         "description": description,
-        "note": "Could not auto-generate — use raw display filter syntax",
+        "note": "Could not auto-generate — treating input as raw display filter syntax",
     }
 
 

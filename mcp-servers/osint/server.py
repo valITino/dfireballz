@@ -45,8 +45,8 @@ def username_search(
     """
     results = {}
 
-    # Maigret search
-    maigret_cmd = ["maigret", username, "--timeout", "15"]
+    # Maigret search (--no-update prevents PermissionError on read-only site-packages)
+    maigret_cmd = ["maigret", username, "--timeout", "15", "--no-update"]
     if output_format == "json":
         maigret_cmd.append("--json")
     results["maigret"] = _run(maigret_cmd, timeout=120)
@@ -77,12 +77,16 @@ def email_check(email: str) -> dict:
 
 
 @mcp.tool()
-def harvester_scan(domain: str, sources: str = "all", limit: int = 500) -> dict:
+def harvester_scan(
+    domain: str,
+    sources: str = "anubis,certspotter,crtsh,dnsdumpster,hackertarget,rapiddns,subdomaincenter,urlscan",
+    limit: int = 500,
+) -> dict:
     """Run theHarvester to find emails, subdomains, hosts, and employee names.
 
     Args:
         domain: Target domain
-        sources: Data sources (all, google, bing, linkedin, etc.)
+        sources: Comma-separated data sources (anubis, certspotter, crtsh, dnsdumpster, hackertarget, rapiddns, subdomaincenter, urlscan)
         limit: Maximum results to return
     """
     cmd = ["theHarvester", "-d", domain, "-b", sources, "-l", str(limit)]
@@ -98,12 +102,16 @@ def subdomain_enum(domain: str) -> dict:
     """
     results = {}
 
-    # subfinder
-    results["subfinder"] = _run(["subfinder", "-d", domain, "-silent"], timeout=120)
+    # subfinder (-timeout flag in seconds, -max-time caps total runtime)
+    results["subfinder"] = _run(
+        ["subfinder", "-d", domain, "-silent", "-timeout", "30", "-max-time", "90"],
+        timeout=120,
+    )
 
-    # amass passive
+    # amass passive (no sudo needed for passive enum)
     results["amass"] = _run(
-        ["amass", "enum", "-passive", "-d", domain], timeout=300
+        ["amass", "enum", "-passive", "-norecursive", "-d", domain],
+        timeout=300,
     )
 
     return results

@@ -1,43 +1,87 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "╔══════════════════════════════════════════╗"
-echo "║     DFIReballz Setup Wizard              ║"
-echo "║     Digital Forensics Platform           ║"
-echo "╚══════════════════════════════════════════╝"
+# ── Colors ──────────────────────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+CHECK="${GREEN}✓${NC}"
+CROSS="${RED}✗${NC}"
+WARN="${YELLOW}!${NC}"
+
+echo ""
+echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}${BOLD}║        DFIReballz — Setup Wizard                    ║${NC}"
+echo -e "${CYAN}${BOLD}║        Digital Forensics & Cybercrime Platform       ║${NC}"
+echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Check prerequisites
-echo "[1/6] Checking prerequisites..."
+# ── Step 1: Prerequisites ──────────────────────────────────────────
+echo -e "${BOLD}[1/7] Checking prerequisites...${NC}"
+echo ""
+
+ERRORS=0
 
 if ! command -v docker &>/dev/null; then
-    echo "ERROR: Docker is not installed. Install Docker 25+ first."
-    exit 1
+    echo -e "  ${CROSS} Docker is not installed. Install Docker 25+ first."
+    echo -e "     ${DIM}https://docs.docker.com/get-docker/${NC}"
+    ERRORS=$((ERRORS + 1))
+else
+    DOCKER_VERSION=$(docker version --format '{{.Server.Version}}' 2>/dev/null || echo "unknown")
+    echo -e "  ${CHECK} Docker: ${DOCKER_VERSION}"
 fi
 
 if ! docker compose version &>/dev/null; then
-    echo "ERROR: Docker Compose v2 is not installed."
+    echo -e "  ${CROSS} Docker Compose v2 is not installed."
+    ERRORS=$((ERRORS + 1))
+else
+    COMPOSE_VERSION=$(docker compose version --short 2>/dev/null || echo "unknown")
+    echo -e "  ${CHECK} Docker Compose: ${COMPOSE_VERSION}"
+fi
+
+if [ "$ERRORS" -gt 0 ]; then
+    echo ""
+    echo -e "  ${RED}${BOLD}Cannot continue — install missing prerequisites.${NC}"
     exit 1
 fi
 
-echo "  Docker: $(docker --version | head -1)"
-echo "  Docker Compose: $(docker compose version | head -1)"
+# Check Docker socket
+DOCKER_GID_VALUE=$(stat -c '%g' /var/run/docker.sock 2>/dev/null || getent group docker 2>/dev/null | cut -d: -f3 || echo "999")
+echo -e "  ${CHECK} Docker socket GID: ${DOCKER_GID_VALUE}"
 
-# Check for NVIDIA GPU (optional)
+# RAM check
+TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+TOTAL_RAM_GB=$((TOTAL_RAM_KB / 1024 / 1024))
+if [ "$TOTAL_RAM_GB" -ge 16 ]; then
+    echo -e "  ${CHECK} RAM: ${TOTAL_RAM_GB} GB"
+elif [ "$TOTAL_RAM_GB" -ge 8 ]; then
+    echo -e "  ${WARN} RAM: ${TOTAL_RAM_GB} GB (16 GB recommended)"
+else
+    echo -e "  ${CROSS} RAM: ${TOTAL_RAM_GB} GB (need at least 8 GB)"
+fi
+
+# GPU check
+GPU_AVAILABLE=false
 if command -v nvidia-smi &>/dev/null; then
-    echo "  NVIDIA GPU: Detected"
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo "detected")
+    echo -e "  ${CHECK} NVIDIA GPU: ${GPU_NAME}"
     GPU_AVAILABLE=true
 else
-    echo "  NVIDIA GPU: Not detected (GPU features disabled)"
-    GPU_AVAILABLE=false
+    echo -e "  ${DIM}  ℹ  No NVIDIA GPU detected (optional — CPU mode works fine)${NC}"
 fi
 echo ""
 
-# Generate .env file
-echo "[2/6] Generating environment configuration..."
+# ── Step 2: Generate .env ──────────────────────────────────────────
+echo -e "${BOLD}[2/7] Generating environment configuration...${NC}"
+echo ""
 
 if [ -f .env ]; then
-    echo "  .env file already exists. Backing up to .env.backup"
+    echo -e "  ${WARN} .env already exists — backing up to .env.backup"
     cp .env .env.backup
 fi
 
@@ -78,7 +122,7 @@ VULNCHECK_API_KEY=
 # ─── Open WebUI + Ollama ────────────────────────────────────────────
 WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
 MCPO_API_KEY=${MCPO_API_KEY}
-DOCKER_GID=$(getent group docker 2>/dev/null | cut -d: -f3 || echo "999")
+DOCKER_GID=${DOCKER_GID_VALUE}
 
 # ─── GPU Support ─────────────────────────────────────────────────────
 ENABLE_GPU=${GPU_AVAILABLE}
@@ -89,126 +133,246 @@ LOG_LEVEL=INFO
 SECRET_KEY=${SECRET_KEY}
 EOF
 
-echo "  .env file created with secure random passwords"
+echo -e "  ${CHECK} .env created with secure random passwords"
 echo ""
 
-# Create directories
-echo "[3/6] Creating data directories..."
-mkdir -p cases evidence reports
-echo "  cases/ evidence/ reports/ directories ready"
+# ── Step 3: Create directories ─────────────────────────────────────
+echo -e "${BOLD}[3/7] Creating data directories...${NC}"
 echo ""
 
-# MCP Host selection
-echo "[4/7] MCP Host Configuration"
-echo "  Select your AI host:"
-echo "    1) Claude Code (recommended)"
-echo "    2) Claude Desktop"
-echo "    3) MCPHost + Ollama"
-echo "    4) Open WebUI + Ollama"
+mkdir -p cases evidence reports results
+mkdir -p output/{findings,screenshots,logs,exports,timelines}
+
+echo -e "  ${CHECK} cases/        — Case working files"
+echo -e "  ${CHECK} evidence/     — Evidence files (mounted read-only in containers)"
+echo -e "  ${CHECK} reports/      — Generated forensic reports"
+echo -e "  ${CHECK} results/      — Session data and structured output"
+echo -e "  ${CHECK} output/       — Host-visible investigation output:"
+echo -e "     ${DIM}├── findings/    — Analysis results and summaries${NC}"
+echo -e "     ${DIM}├── screenshots/ — Captured screenshots and visual evidence${NC}"
+echo -e "     ${DIM}├── logs/        — Investigation activity logs${NC}"
+echo -e "     ${DIM}├── exports/     — Exported artifacts (carved files, objects)${NC}"
+echo -e "     ${DIM}└── timelines/   — Reconstructed event timelines${NC}"
+echo ""
+
+# ── Step 4: MCP Host selection ─────────────────────────────────────
+echo -e "${BOLD}[4/7] Choose your AI host${NC}"
+echo ""
+echo -e "  ${BOLD}Which AI client will you use with DFIReballz?${NC}"
+echo ""
+echo -e "  ${CYAN}1)${NC} Claude Code in Docker       ${DIM}(recommended — fully containerized, zero install)${NC}"
+echo -e "  ${CYAN}2)${NC} Claude Code on host          ${DIM}(you already have Claude Code installed)${NC}"
+echo -e "  ${CYAN}3)${NC} Claude Desktop               ${DIM}(GUI app — macOS, Windows, Linux)${NC}"
+echo -e "  ${CYAN}4)${NC} ChatGPT                      ${DIM}(requires SSE proxy — see guide after setup)${NC}"
+echo -e "  ${CYAN}5)${NC} MCPHost + Ollama             ${DIM}(fully local, no cloud — requires Go)${NC}"
+echo -e "  ${CYAN}6)${NC} Open WebUI + Ollama          ${DIM}(web UI for local models)${NC}"
 echo ""
 read -rp "  Choice [1]: " MCP_CHOICE
 MCP_CHOICE=${MCP_CHOICE:-1}
 
 case $MCP_CHOICE in
     1) MCP_HOST="claude-code" ;;
-    2) MCP_HOST="claude-desktop" ;;
-    3) MCP_HOST="mcphost" ;;
-    4) MCP_HOST="open-webui" ;;
+    2) MCP_HOST="claude-code" ;;
+    3) MCP_HOST="claude-desktop" ;;
+    4) MCP_HOST="chatgpt" ;;
+    5) MCP_HOST="mcphost" ;;
+    6) MCP_HOST="open-webui" ;;
     *) MCP_HOST="claude-code" ;;
 esac
 
 sed -i "s|MCP_HOST=claude-code|MCP_HOST=${MCP_HOST}|" .env
-echo "  MCP Host set to: ${MCP_HOST}"
+echo ""
+echo -e "  ${CHECK} MCP Host: ${MCP_HOST}"
 echo ""
 
-# API Keys (optional)
-echo "[5/7] API Keys (optional — press Enter to skip)"
+# ── Step 5: API Keys ──────────────────────────────────────────────
+echo -e "${BOLD}[5/7] API Keys (optional — press Enter to skip any)${NC}"
 echo ""
-echo "  These services require free accounts. Sign up first if you haven't:"
-echo "    VirusTotal  — https://www.virustotal.com/gui/my-apikey"
-echo "    Shodan      — https://account.shodan.io/"
-echo "    AbuseIPDB   — https://www.abuseipdb.com/account/api"
-echo "    URLScan.io  — https://urlscan.io/user/signup"
+echo -e "  ${DIM}These threat-intel services offer free tiers. Sign up first if you haven't.${NC}"
+echo -e "  ${DIM}You can add or change keys later in .env — no need to re-run setup.${NC}"
 echo ""
 
-read -rp "  VirusTotal API Key: " VT_KEY
-if [ -n "$VT_KEY" ]; then
-    sed -i "s|VIRUSTOTAL_API_KEY=|VIRUSTOTAL_API_KEY=${VT_KEY}|" .env
-fi
+declare -A API_KEYS=(
+    ["VirusTotal"]="VIRUSTOTAL_API_KEY|https://www.virustotal.com/gui/my-apikey"
+    ["Shodan"]="SHODAN_API_KEY|https://account.shodan.io/"
+    ["AbuseIPDB"]="ABUSEIPDB_API_KEY|https://www.abuseipdb.com/account/api"
+    ["URLScan.io"]="URLSCAN_API_KEY|https://urlscan.io/user/signup"
+)
 
-read -rp "  Shodan API Key: " SHODAN_KEY
-if [ -n "$SHODAN_KEY" ]; then
-    sed -i "s|SHODAN_API_KEY=|SHODAN_API_KEY=${SHODAN_KEY}|" .env
-fi
-
-read -rp "  AbuseIPDB API Key: " ABUSE_KEY
-if [ -n "$ABUSE_KEY" ]; then
-    sed -i "s|ABUSEIPDB_API_KEY=|ABUSEIPDB_API_KEY=${ABUSE_KEY}|" .env
-fi
-
-read -rp "  URLScan.io API Key: " URLSCAN_KEY
-if [ -n "$URLSCAN_KEY" ]; then
-    sed -i "s|URLSCAN_API_KEY=|URLSCAN_API_KEY=${URLSCAN_KEY}|" .env
-fi
-
-# Anthropic API key — only relevant for containerized Claude Code
-if [ "$MCP_HOST" = "claude-code" ]; then
-    echo ""
-    echo "  Claude Code in Docker supports two auth methods:"
-    echo ""
-    echo "    1) API key (recommended for Docker) — pay-per-use billing"
-    echo "       Get one at: https://console.anthropic.com/settings/keys"
-    echo ""
-    echo "    2) OAuth token — uses your Pro/Max subscription quota"
-    echo "       Generate with: claude setup-token"
-    echo "       Then set CLAUDE_CODE_OAUTH_TOKEN in .env"
-    echo ""
-    echo "    3) Interactive login — leave both blank, log in on first run"
-    echo "       Auth persists across restarts in the claude-config volume."
-    echo ""
-    echo "  You can set this later with: make setup-api-key"
-    echo ""
-    read -rp "  Anthropic API Key (Enter to skip): " ANTHROPIC_KEY
-    if [ -n "$ANTHROPIC_KEY" ]; then
-        if grep -q '^ANTHROPIC_API_KEY=' .env; then
-            sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
-        elif grep -q '^# ANTHROPIC_API_KEY=' .env; then
-            sed -i "s|^# ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
-        else
-            echo "" >> .env
-            echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
-            echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> .env
-        fi
+for service in "VirusTotal" "Shodan" "AbuseIPDB" "URLScan.io"; do
+    IFS='|' read -r env_var url <<< "${API_KEYS[$service]}"
+    echo -e "  ${DIM}${url}${NC}"
+    read -rp "  ${service} API Key: " KEY_VALUE
+    if [ -n "$KEY_VALUE" ]; then
+        sed -i "s|${env_var}=|${env_var}=${KEY_VALUE}|" .env
+        echo -e "  ${CHECK} Saved"
+    else
+        echo -e "  ${DIM}  Skipped${NC}"
     fi
-else
     echo ""
-    echo "  Skipping Anthropic API key (only needed for 'make claude-code')."
-    echo "  Set it later with: make setup-api-key"
+done
+
+# Claude Code auth (only for Docker or host-installed Claude Code)
+if [ "$MCP_CHOICE" = "1" ]; then
+    echo -e "  ${BOLD}Claude Code Docker Authentication${NC}"
+    echo ""
+    echo -e "  ${CYAN}a)${NC} API key           ${DIM}(pay-per-use — https://console.anthropic.com/settings/keys)${NC}"
+    echo -e "  ${CYAN}b)${NC} OAuth token        ${DIM}(uses your Pro/Max subscription)${NC}"
+    echo -e "  ${CYAN}c)${NC} Interactive login  ${DIM}(log in on first launch — credentials persist)${NC}"
+    echo ""
+    read -rp "  Auth method [c]: " AUTH_CHOICE
+    AUTH_CHOICE=${AUTH_CHOICE:-c}
+
+    case $AUTH_CHOICE in
+        a|A)
+            read -rp "  Anthropic API Key: " ANTHROPIC_KEY
+            if [ -n "$ANTHROPIC_KEY" ]; then
+                echo "" >> .env
+                echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
+                echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> .env
+                echo -e "  ${CHECK} API key saved"
+            fi
+            ;;
+        b|B)
+            echo ""
+            echo -e "  ${DIM}Run 'claude setup-token' on your host to generate a token.${NC}"
+            read -rp "  OAuth Token: " OAUTH_TOKEN
+            if [ -n "$OAUTH_TOKEN" ]; then
+                echo "" >> .env
+                echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
+                echo "CLAUDE_CODE_OAUTH_TOKEN=${OAUTH_TOKEN}" >> .env
+                echo -e "  ${CHECK} OAuth token saved"
+            fi
+            ;;
+        *)
+            echo -e "  ${CHECK} Interactive login — you'll be prompted on first 'make claude-code'"
+            ;;
+    esac
+    echo ""
 fi
 
+# ── Step 6: Pull images ───────────────────────────────────────────
+echo -e "${BOLD}[6/7] Pulling pre-built Docker images from Docker Hub...${NC}"
+echo -e "  ${DIM}Images: docker.io/crhacky/dfireballz:*${NC}"
 echo ""
 
-# Pull images
-echo "[6/7] Pulling pre-built Docker images from Docker Hub..."
-echo "  Images are published at docker.io/crhacky/dfireballz"
-echo ""
-
-docker compose pull --ignore-pull-failures
+docker compose pull --ignore-pull-failures 2>&1 | grep -E "Pulled|Pulling|Error|exists" || true
 
 echo ""
 
-# Generate MCP configuration
-echo "[7/7] Generating MCP configuration for ${MCP_HOST}..."
+# ── Step 7: Generate MCP configuration ────────────────────────────
+echo -e "${BOLD}[7/7] Generating MCP configuration...${NC}"
+echo ""
 bash scripts/configure_mcp.sh --host "${MCP_HOST}"
 
+# ── Post-setup guide ──────────────────────────────────────────────
 echo ""
-echo "══════════════════════════════════════════════"
-echo "  Setup complete!"
+echo -e "${GREEN}${BOLD}══════════════════════════════════════════════════════${NC}"
+echo -e "${GREEN}${BOLD}  Setup complete!${NC}"
+echo -e "${GREEN}${BOLD}══════════════════════════════════════════════════════${NC}"
 echo ""
-echo "  Next step — just run:"
-echo "    make start              — Pull & start DFIReballz"
+
+case $MCP_CHOICE in
+    1)
+        echo -e "  ${BOLD}Next steps — Claude Code (Docker):${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Start the platform:     ${BOLD}make start${NC}"
+        echo -e "  ${CYAN}2.${NC} Launch Claude Code:      ${BOLD}make claude-code${NC}"
+        echo -e "  ${CYAN}3.${NC} Start investigating!"
+        echo ""
+        echo -e "  ${DIM}All findings will appear in ./output/ on your host machine.${NC}"
+        ;;
+    2)
+        echo -e "  ${BOLD}Next steps — Claude Code (Host):${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Start the platform:     ${BOLD}make start${NC}"
+        echo -e "  ${CYAN}2.${NC} Open Claude Code in this directory"
+        echo -e "     ${DIM}MCP tools are auto-discovered from .mcp.json${NC}"
+        echo -e "  ${CYAN}3.${NC} Start investigating!"
+        echo ""
+        echo -e "  ${DIM}Reports appear in ./reports/ — results in ./results/${NC}"
+        ;;
+    3)
+        echo -e "  ${BOLD}Next steps — Claude Desktop:${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Start the platform:     ${BOLD}make start${NC}"
+        echo -e "  ${CYAN}2.${NC} Copy MCP config to Claude Desktop:"
+        if [[ "${OSTYPE:-}" == "darwin"* ]]; then
+            CONFIG_PATH="~/Library/Application Support/Claude/claude_desktop_config.json"
+        elif [[ "${OSTYPE:-}" == "msys" || "${OSTYPE:-}" == "cygwin" ]]; then
+            CONFIG_PATH="%APPDATA%\\Claude\\claude_desktop_config.json"
+        else
+            CONFIG_PATH="~/.config/Claude/claude_desktop_config.json"
+        fi
+        echo ""
+        echo -e "     ${DIM}Merge the contents of .mcp.json into:${NC}"
+        echo -e "     ${BOLD}${CONFIG_PATH}${NC}"
+        echo ""
+        echo -e "     ${DIM}Or run this to auto-merge (creates backup):${NC}"
+        echo -e "     ${BOLD}bash scripts/install-claude-desktop.sh${NC}"
+        echo ""
+        echo -e "  ${CYAN}3.${NC} Restart Claude Desktop"
+        echo -e "  ${CYAN}4.${NC} MCP tools appear automatically — start investigating!"
+        ;;
+    4)
+        echo -e "  ${BOLD}Next steps — ChatGPT:${NC}"
+        echo ""
+        echo -e "  ${YELLOW}Note: ChatGPT uses HTTP/SSE transport, not stdio.${NC}"
+        echo -e "  ${DIM}You need the mcpo proxy to bridge MCP servers as HTTP endpoints.${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Start the platform with OpenWebUI profile:"
+        echo -e "     ${BOLD}make start-openwebui${NC}"
+        echo ""
+        echo -e "  ${CYAN}2.${NC} In ChatGPT (Developer Mode):"
+        echo -e "     Settings > Connectors > Advanced > Developer Mode"
+        echo -e "     Add MCP server URL: ${BOLD}http://YOUR_HOST_IP:8812${NC}"
+        echo ""
+        echo -e "  ${CYAN}3.${NC} Each MCP server is available at:"
+        echo -e "     ${DIM}http://YOUR_HOST_IP:8812/kali-forensics/${NC}"
+        echo -e "     ${DIM}http://YOUR_HOST_IP:8812/osint/${NC}"
+        echo -e "     ${DIM}http://YOUR_HOST_IP:8812/threat-intel/${NC}"
+        echo -e "     ${DIM}... (see README for full list)${NC}"
+        echo ""
+        echo -e "  ${YELLOW}Important: Your machine must be reachable from the internet${NC}"
+        echo -e "  ${YELLOW}for ChatGPT to connect (or use a tunnel like ngrok/cloudflared).${NC}"
+        ;;
+    5)
+        echo -e "  ${BOLD}Next steps — MCPHost + Ollama:${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Install Ollama:          ${BOLD}curl -fsSL https://ollama.ai/install.sh | sh${NC}"
+        echo -e "  ${CYAN}2.${NC} Install MCPHost:         ${BOLD}go install github.com/mark3labs/mcphost@latest${NC}"
+        echo -e "  ${CYAN}3.${NC} Pull a model:            ${BOLD}ollama pull qwen3:8b${NC}"
+        echo -e "  ${CYAN}4.${NC} Start DFIReballz:        ${BOLD}make start${NC}"
+        echo -e "  ${CYAN}5.${NC} Launch MCPHost:           ${BOLD}mcphost -m ollama/qwen3:8b --config ~/.mcphost.yml${NC}"
+        echo ""
+        echo -e "  ${DIM}Config written to ~/.mcphost.yml${NC}"
+        echo ""
+        echo -e "  ${BOLD}Recommended models:${NC}"
+        echo -e "  ${DIM}  qwen3:8b    — Excellent tool calling, 8 GB RAM${NC}"
+        echo -e "  ${DIM}  qwen3:14b   — Better reasoning, 16 GB RAM${NC}"
+        echo -e "  ${DIM}  llama3.1:8b — Good tool calling, 8 GB RAM${NC}"
+        ;;
+    6)
+        echo -e "  ${BOLD}Next steps — Open WebUI + Ollama:${NC}"
+        echo ""
+        echo -e "  ${CYAN}1.${NC} Start everything:       ${BOLD}make start-openwebui${NC}"
+        echo -e "  ${CYAN}2.${NC} Open http://localhost:8080"
+        echo -e "  ${CYAN}3.${NC} Register MCP tools:"
+        echo -e "     Admin Panel > Settings > External Tools"
+        echo -e "     Add each: ${DIM}http://mcpo:8000/<server-name>/${NC}"
+        echo ""
+        ;;
+esac
+
+echo -e "  ${BOLD}Host directories:${NC}"
+echo -e "  ${DIM}  ./evidence/   → Place evidence files here (mounted read-only)${NC}"
+echo -e "  ${DIM}  ./cases/      → Working case files${NC}"
+echo -e "  ${DIM}  ./reports/    → Generated forensic reports${NC}"
+echo -e "  ${DIM}  ./results/    → Session data and structured output${NC}"
+echo -e "  ${DIM}  ./output/     → All investigation output (findings, screenshots, logs)${NC}"
 echo ""
-echo "  Orchestrator API: http://localhost:8800"
+echo -e "  ${BOLD}Useful commands:${NC}"
+echo -e "  ${DIM}  make status   — Container health overview${NC}"
+echo -e "  ${DIM}  make health   — MCP server health check${NC}"
+echo -e "  ${DIM}  make help     — All available commands${NC}"
 echo ""
-echo "  Your MCP config for ${MCP_HOST} has been generated automatically."
-echo "══════════════════════════════════════════════"

@@ -84,11 +84,15 @@ should reflect the context of a professional forensic investigator.
 - **MCP Transport: stdio only.** Every MCP server runs `mcp.run(transport="stdio")`.
   The AI host (Claude Code / Claude Desktop / MCPHost) connects via `docker exec -i <container> <cmd>`.
   No HTTP ports, no proxy, no gateway for direct AI host connections.
+- **ChatGPT note:** ChatGPT uses HTTP/SSE transport. Use mcpo proxy (port 8812) as the bridge.
 - **Ollama note:** Ollama has NO native MCP support. Use MCPHost (`mark3labs/mcphost`) or
   Open WebUI + mcpo proxy as the bridge. MCPHost model syntax: `mcphost -m ollama/qwen3:8b --config ~/.mcphost.yml`
 - Orchestrator API (port 8800) manages cases, evidence, and playbooks
-- For Open WebUI scenario: mcpo container (port 8812) exposes MCP servers as OpenAPI endpoints.
+- For Open WebUI / ChatGPT scenario: mcpo container (port 8812) exposes MCP servers as OpenAPI endpoints.
   The mcpo container needs `/var/run/docker.sock` mounted to run `docker exec` commands.
+- **Host output directory:** `./output/` is bind-mounted to the Claude Code container at `/workspace/output`.
+  Contains: `findings/`, `screenshots/`, `logs/`, `exports/`, `timelines/`.
+  All investigation output should be written here so it's visible on the host.
 
 **MCP Servers (stdio only — no exposed ports):**
 | Container | Key Tools |

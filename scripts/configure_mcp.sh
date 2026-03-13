@@ -96,6 +96,23 @@ case $MCP_HOST in
         echo "  ${CONFIG_PATH}"
         echo ""
         echo "Then restart Claude Desktop."
+        echo ""
+        echo "Or auto-merge with: bash scripts/install-claude-desktop.sh"
+        ;;
+
+    chatgpt)
+        echo "$MCP_CONFIG" > .mcp.json
+        echo "Written .mcp.json to project root"
+        echo ""
+        echo "ChatGPT uses HTTP/SSE transport — you need the mcpo proxy."
+        echo ""
+        echo "  1. Start with OpenWebUI profile:  make start-openwebui"
+        echo "  2. In ChatGPT Developer Mode:"
+        echo "     Settings > Connectors > Advanced > Developer Mode"
+        echo "     Add MCP server URL: http://YOUR_HOST_IP:8812"
+        echo ""
+        echo "  Each server is at: http://YOUR_HOST_IP:8812/<server-name>/"
+        echo "  Your machine must be reachable from the internet (or use ngrok/cloudflared)."
         ;;
 
     mcphost)
@@ -146,7 +163,7 @@ case $MCP_HOST in
 
     *)
         echo "Unknown MCP host: ${MCP_HOST}"
-        echo "Valid options: claude-code, claude-desktop, mcphost, open-webui"
+        echo "Valid options: claude-code, claude-desktop, chatgpt, mcphost, open-webui"
         exit 1
         ;;
 esac

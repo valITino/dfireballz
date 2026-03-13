@@ -15,9 +15,9 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./mcp-servers/kali-forensics/server.py:/app/server.py:ro
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
-      - ./reports:/reports:ro
+      - ./reports:/reports
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -33,9 +33,9 @@ services:
       start_period: 15s
       start_interval: 3s
     volumes:
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
-      - ./reports:/reports:ro
+      - ./reports:/reports
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -56,8 +56,9 @@ services:
       SHODAN_API_KEY: ${SHODAN_API_KEY:-}
     volumes:
       - ./mcp-servers/osint/server.py:/app/server.py:ro
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
+      - ./reports:/reports
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -81,8 +82,9 @@ services:
       VULNCHECK_API_KEY: ${VULNCHECK_API_KEY:-}
     volumes:
       - ./mcp-servers/threat-intel/server.py:/app/server.py:ro
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
+      - ./reports:/reports
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -101,8 +103,9 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./mcp-servers/binary-analysis/server.py:/app/server.py:ro
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
+      - ./reports:/reports
     networks:
       - dfireballz-net
     restart: unless-stopped
@@ -112,8 +115,7 @@ services:
     build: ./mcp-servers/network-forensics
     container_name: dfireballz-network-forensics-1
     command: ["sleep", "infinity"]
-    security_opt:
-      - no-new-privileges:true
+    # no-new-privileges omitted: dumpcap needs inherited capabilities for packet capture
     healthcheck:
       start_period: 15s
       start_interval: 3s
@@ -121,9 +123,9 @@ services:
       PYTHONUNBUFFERED: "1"
     volumes:
       - ./mcp-servers/network-forensics/server.py:/app/server.py:ro
-      - ./cases:/cases:ro
+      - ./cases:/cases
       - ./evidence:/evidence:ro
-      - ./reports:/reports:ro
+      - ./reports:/reports
     cap_add:
       - NET_RAW
       - NET_ADMIN
@@ -247,6 +249,7 @@ services:
       - ./evidence:/workspace/evidence:ro
       - ./reports:/workspace/reports
       - ./results:/workspace/results
+      - ./output:/workspace/output
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:
       - "${DOCKER_GID:-999}"

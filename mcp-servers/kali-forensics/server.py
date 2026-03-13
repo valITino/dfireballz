@@ -47,7 +47,8 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
     if allowed_dirs is None:
         allowed_dirs = [EVIDENCE_DIR, CASES_DIR]
     for d in allowed_dirs:
-        if str(resolved).startswith(str(d.resolve())):
+        d_resolved = d.resolve()
+        if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved
     raise ValueError(f"Path {path} is outside allowed directories")
 
@@ -101,7 +102,7 @@ def bulk_extract(image_path: str, output_dir: str) -> dict:
         output_dir: Output directory for extracted artifacts
     """
     path = _validate_path(image_path)
-    out = _validate_path(output_dir, [CASES_DIR])
+    out = _validate_path(output_dir, [CASES_DIR, Path("/reports")])
     return _run(["bulk_extractor", "-o", str(out), str(path)], timeout=1800)
 
 

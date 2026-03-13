@@ -18,6 +18,7 @@ mcp = FastMCP(
 
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
+REPORTS_DIR = Path("/reports")
 
 
 def _run(args: list[str], timeout: int = 300) -> dict:
@@ -40,8 +41,9 @@ def _run(args: list[str], timeout: int = 300) -> dict:
 def _validate_path(path: str) -> Path:
     """Validate file path."""
     resolved = Path(path).resolve()
-    for d in [EVIDENCE_DIR, CASES_DIR]:
-        if str(resolved).startswith(str(d.resolve())):
+    for d in [EVIDENCE_DIR, CASES_DIR, REPORTS_DIR]:
+        d_resolved = d.resolve()
+        if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved
     raise ValueError(f"Path {path} is outside allowed directories")
 

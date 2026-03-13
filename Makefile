@@ -115,6 +115,7 @@ install-dev:
 # ─── Start / Stop ─────────────────────────────────────────────────────────────
 
 start up:
+	@mkdir -p cases evidence reports results output/findings output/screenshots output/logs output/exports output/timelines
 	docker compose pull --ignore-pull-failures
 	docker compose up -d --no-build
 	@echo ""
@@ -123,6 +124,12 @@ start up:
 	@echo ""
 	@echo "  DFIReballz running — Orchestrator API: http://localhost:8800"
 	@echo "  MCP config auto-generated — no need to run 'make configure-mcp' separately"
+	@echo ""
+	@echo "  Host directories:"
+	@echo "    ./evidence/  — Place evidence here (read-only in containers)"
+	@echo "    ./cases/     — Working case files"
+	@echo "    ./reports/   — Generated forensic reports"
+	@echo "    ./output/    — Investigation output (findings, screenshots, logs)"
 
 start-openwebui:
 	docker compose --profile openwebui pull --ignore-pull-failures
