@@ -2,17 +2,18 @@ FROM python:3.12-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install network tools
+# Install network tools — full wireshark provides capinfos, editcap, mergecap, dumpcap
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    tshark \
-    wireshark-common \
+    wireshark \
     tcpdump \
     libcap2-bin \
+    geoip-database \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Grant capture capabilities to dumpcap (not full root)
+# Grant capture capabilities to dumpcap and tcpdump (non-root capture)
 RUN setcap cap_net_raw,cap_net_admin+eip /usr/bin/dumpcap || true
+RUN setcap cap_net_raw+eip /usr/bin/tcpdump || true
 
 # Python packages
 RUN pip install --no-cache-dir \
