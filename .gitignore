@@ -49,6 +49,20 @@ evidence/*
 !evidence/.gitkeep
 reports/*
 !reports/.gitkeep
+results/*
+!results/.gitkeep
+
+# Investigation output (host-visible findings — content not tracked)
+output/findings/*
+!output/findings/.gitkeep
+output/screenshots/*
+!output/screenshots/.gitkeep
+output/logs/*
+!output/logs/.gitkeep
+output/exports/*
+!output/exports/.gitkeep
+output/timelines/*
+!output/timelines/.gitkeep
 
 # Secrets
 *.pem
@@ -64,4 +78,4 @@ secrets.json
 
 # Logs
 *.log
-logs/
+/logs/

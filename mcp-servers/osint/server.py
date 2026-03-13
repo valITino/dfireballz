@@ -1,5 +1,6 @@
 """OSINT MCP Server — Aggregates Maigret, Sherlock, Holehe, theHarvester, and more."""
 
+import json
 import subprocess
 
 from fastmcp import FastMCP
@@ -28,25 +29,25 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 @mcp.tool()
 def username_search(
     username: str,
-    platforms: str | None = None,
     output_format: str = "text",
 ) -> dict:
     """Search for a username across 500+ platforms using Maigret and Sherlock.
 
     Args:
         username: Username to search for
-        platforms: Comma-separated platform list (optional, default: all)
         output_format: Output format (text, json)
     """
     results = {}
 
-    # Maigret search
-    maigret_cmd = ["maigret", username, "--timeout", "15"]
+    # Maigret search (--no-update prevents PermissionError on read-only site-packages)
+    maigret_cmd = ["maigret", username, "--timeout", "15", "--no-update"]
     if output_format == "json":
         maigret_cmd.append("--json")
     results["maigret"] = _run(maigret_cmd, timeout=120)
@@ -76,13 +77,23 @@ def email_check(email: str) -> dict:
     return results
 
 
+_DEFAULT_HARVESTER_SOURCES = (
+    "anubis,certspotter,crtsh,dnsdumpster,"
+    "hackertarget,rapiddns,subdomaincenter,urlscan"
+)
+
+
 @mcp.tool()
-def harvester_scan(domain: str, sources: str = "all", limit: int = 500) -> dict:
+def harvester_scan(
+    domain: str,
+    sources: str = _DEFAULT_HARVESTER_SOURCES,
+    limit: int = 500,
+) -> dict:
     """Run theHarvester to find emails, subdomains, hosts, and employee names.
 
     Args:
         domain: Target domain
-        sources: Data sources (all, google, bing, linkedin, etc.)
+        sources: Comma-separated data sources
         limit: Maximum results to return
     """
     cmd = ["theHarvester", "-d", domain, "-b", sources, "-l", str(limit)]
@@ -98,12 +109,16 @@ def subdomain_enum(domain: str) -> dict:
     """
     results = {}
 
-    # subfinder
-    results["subfinder"] = _run(["subfinder", "-d", domain, "-silent"], timeout=120)
+    # subfinder (-timeout flag in seconds, -max-time caps total runtime)
+    results["subfinder"] = _run(
+        ["subfinder", "-d", domain, "-silent", "-timeout", "30", "-max-time", "90"],
+        timeout=120,
+    )
 
-    # amass passive
+    # amass passive (no sudo needed for passive enum)
     results["amass"] = _run(
-        ["amass", "enum", "-passive", "-d", domain], timeout=300
+        ["amass", "enum", "-passive", "-norecursive", "-d", domain],
+        timeout=300,
     )
 
     return results
@@ -116,7 +131,13 @@ def dns_twist(domain: str) -> dict:
     Args:
         domain: Target domain to check for lookalikes
     """
-    return _run(["dnstwist", "--format", "json", domain], timeout=120)
+    result = _run(["dnstwist", "--format", "json", domain], timeout=120)
+    if result.get("stdout"):
+        try:
+            result["parsed"] = json.loads(result["stdout"])
+        except json.JSONDecodeError:
+            pass
+    return result
 
 
 @mcp.tool()

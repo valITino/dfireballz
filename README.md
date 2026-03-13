@@ -25,16 +25,17 @@
 - [Architecture](#architecture)
 - [Components](#components)
 - [Prerequisites](#prerequisites)
-- [Installation](#installation)
+- [Quick Start](#quick-start)
 - [Tutorial 1: Claude Code (Docker) — Recommended](#tutorial-1-claude-code-docker--recommended)
 - [Tutorial 2: Claude Code (Host-Installed)](#tutorial-2-claude-code-host-installed)
 - [Tutorial 3: Claude Desktop](#tutorial-3-claude-desktop)
-- [Tutorial 4: MCPHost + Ollama](#tutorial-4-mcphost--ollama)
-- [Tutorial 5: Open WebUI + Ollama](#tutorial-5-open-webui--ollama)
+- [Tutorial 4: ChatGPT](#tutorial-4-chatgpt)
+- [Tutorial 5: MCPHost + Ollama](#tutorial-5-mcphost--ollama)
+- [Tutorial 6: Open WebUI + Ollama](#tutorial-6-open-webui--ollama)
 - [How Prompts Flow Through the System](#how-prompts-flow-through-the-system)
+- [Host Directory Layout](#host-directory-layout)
 - [MCP Servers Reference](#mcp-servers-reference)
 - [Investigation Playbooks](#investigation-playbooks)
-- [Report Export](#report-export)
 - [API Keys Setup](#api-keys-setup)
 - [Troubleshooting](#troubleshooting)
 - [Makefile Shortcuts](#makefile-shortcuts)
@@ -47,7 +48,7 @@
 
 ## How It Works
 
-Your AI client (Claude Code, Claude Desktop, or MCPHost+Ollama) **is the orchestrator**. The workflow:
+Your AI client (Claude Code, Claude Desktop, ChatGPT, or MCPHost+Ollama) **is the orchestrator**. The workflow:
 
 1. **You input a prompt** in your AI client (e.g. "Analyze the malware sample at /evidence/sample.exe").
 2. **The AI selects tools** from 7 MCP servers: Kali forensics, Windows forensics, OSINT, threat-intel, binary analysis, network forensics, and filesystem.
@@ -55,7 +56,7 @@ Your AI client (Claude Code, Claude Desktop, or MCPHost+Ollama) **is the orchest
 4. **The AI structures the results** — correlating findings, building timelines, mapping MITRE ATT&CK techniques.
 5. **The AI writes the forensic report** with chain of custody maintained throughout.
 
-Everything runs inside Docker containers. No forensic tools are installed on your host machine.
+Everything runs inside Docker containers. No forensic tools are installed on your host machine. All findings are accessible on your host in the `output/` directory.
 
 ---
 
@@ -64,10 +65,10 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    AI Host (Choose One)                   │
-│  Claude Code │ Claude Desktop │ MCPHost+Ollama │ OpenWebUI│
-└──────┬───────┴───────┬────────┴───────┬────────┴────┬────┘
-       │ docker exec -i│                │             │
-       ▼               ▼                ▼             ▼
+│  Claude Code │ Claude Desktop │ ChatGPT │ MCPHost/WebUI  │
+└──────┬───────┴───────┬────────┴────┬────┴───────┬────────┘
+       │ docker exec -i│             │ HTTP/SSE   │
+       ▼               ▼             ▼            ▼
 ┌──────────────────────────────────────────────────────────┐
 │                   MCP Servers (stdio)                     │
 │ ┌──────────────┐ ┌──────────────┐ ┌────────────────────┐ │
@@ -95,9 +96,25 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 │ │  :8800       │ │  :5432  │ │  :6379     │              │
 │ └──────────────┘ └─────────┘ └────────────┘              │
 └──────────────────────────────────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────────────────────────┐
+│           Host Machine (your computer)                    │
+│  ./evidence/   — Evidence files (read-only in containers)│
+│  ./cases/      — Working case files                      │
+│  ./reports/    — Generated forensic reports               │
+│  ./output/     — Investigation findings, logs, exports   │
+│    ├── findings/    — Analysis results & summaries       │
+│    ├── screenshots/ — Visual evidence captures           │
+│    ├── logs/        — Activity & audit logs              │
+│    ├── exports/     — Carved files & extracted objects    │
+│    └── timelines/   — Event timeline reconstructions     │
+└──────────────────────────────────────────────────────────┘
 ```
 
 **Transport: stdio only.** Every MCP server runs `mcp.run(transport="stdio")`. The AI host connects via `docker exec -i <container> <command>`. No HTTP ports, no proxy, no gateway for direct AI connections.
+
+**Exception:** ChatGPT uses HTTP/SSE transport. For ChatGPT, the mcpo proxy bridges MCP servers as OpenAPI endpoints.
 
 ---
 
@@ -108,7 +125,7 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 | **kali-forensics** | Volatility3, bulk_extractor, YARA, dc3dd, Sleuthkit, foremost, exiftool | — | default |
 | **winforensics** | MFT, ShellBags, LNK, Registry, EVTX, Prefetch, Chainsaw | — | default |
 | **osint** | Maigret, Sherlock, Holehe, theHarvester, DNSTwist, subfinder | — | default |
-| **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan | — | default |
+| **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan, IOC enrichment | — | default |
 | **binary-analysis** | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, binwalk | — | default |
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S | — | default |
 | **filesystem** | Scoped file access to /cases, /evidence (read-only), /reports | — | default |
@@ -118,7 +135,7 @@ Everything runs inside Docker containers. No forensic tools are installed on you
 | **claude-code** | Anthropic CLI client in Docker (no host install needed) | — | `claude-code` |
 | **ollama** | Local LLM inference (Open WebUI scenario) | 11434 | `openwebui` |
 | **open-webui** | Web UI for Ollama models | 8080 | `openwebui` |
-| **mcpo** | MCP-to-OpenAPI bridge for Open WebUI | 8812 | `openwebui` |
+| **mcpo** | MCP-to-OpenAPI bridge for Open WebUI / ChatGPT | 8812 | `openwebui` |
 
 ---
 
@@ -151,7 +168,7 @@ bash scripts/check-requirements.sh
 
 ---
 
-## Installation
+## Quick Start
 
 All images are pre-built and published on [Docker Hub](https://hub.docker.com/r/crhacky/dfireballz). **No local building required.**
 
@@ -168,11 +185,14 @@ make start
 ```
 
 That's it. The setup wizard will:
-1. Generate `.env` with secure random secrets
-2. Ask you to choose your AI host (Claude Code, Claude Desktop, MCPHost, or Open WebUI)
-3. Collect your API keys (VirusTotal, Shodan, AbuseIPDB, URLScan.io)
-4. Pull all pre-built Docker images from Docker Hub
-5. Auto-generate the MCP configuration for your chosen host
+1. Check prerequisites (Docker, Compose, RAM, disk)
+2. Generate `.env` with secure random secrets
+3. Ask you to choose your AI host (Claude Code, Claude Desktop, ChatGPT, MCPHost, or Open WebUI)
+4. Collect your API keys (VirusTotal, Shodan, AbuseIPDB, URLScan.io)
+5. Handle authentication setup for your chosen host
+6. Pull all pre-built Docker images from Docker Hub
+7. Auto-generate the MCP configuration for your chosen host
+8. Create the `output/` directory structure for host-visible findings
 
 > **Want to build from source instead?** Run `make build` before `make start`.
 > This is only needed if you've modified Dockerfiles or server code locally.
@@ -198,18 +218,15 @@ Run Claude Code entirely inside Docker — no local Node.js or Claude Code insta
 
 ### Step 1: Start the stack
 
-Follow [Installation](#installation) above. Make sure `ANTHROPIC_API_KEY` is set in your `.env` file. All core containers must be healthy (`make health`).
+```bash
+make setup      # Select "Claude Code in Docker" when prompted
+make start
+```
 
 ### Step 2: Launch Claude Code
 
 ```bash
 make claude-code
-```
-
-Or manually:
-
-```bash
-docker compose --profile claude-code run --rm claude-code
 ```
 
 The entrypoint script checks each MCP server (two-tier: running + responsive) and shows status before launching the Claude CLI.
@@ -228,12 +245,15 @@ Claude Code will autonomously:
 4. Correlate findings and map to MITRE ATT&CK techniques
 5. Write a forensic report with full chain of custody
 
-### What's in the container
+### Step 4: View results on your host
 
-- DNS configured for reliable Anthropic API access
-- Docker CLI for stdio transport to MCP containers via `docker exec`
-- Evidence mounted read-only for chain-of-custody compliance
-- Reports and results exported to host via bind mounts
+All investigation output is available on your host machine:
+
+```bash
+ls output/findings/       # Analysis results
+ls output/exports/        # Extracted artifacts
+ls reports/               # Forensic reports
+```
 
 ### Monitoring (separate terminal)
 
@@ -253,8 +273,8 @@ If you already have Claude Code installed on your host machine:
 ### Step 1: Start the stack
 
 ```bash
-make setup      # Setup wizard — generates .env, pulls images, auto-generates .mcp.json
-make start      # Start all containers (also regenerates .mcp.json)
+make setup      # Select "Claude Code on host" when prompted
+make start      # Also regenerates .mcp.json
 ```
 
 ### Step 2: Open Claude Code
@@ -275,7 +295,7 @@ Open Claude Code in the DFIReballz directory. All MCP tools are auto-discovered 
 ### Step 1: Start the stack
 
 ```bash
-make setup      # Select "Claude Desktop" when prompted for MCP host
+make setup      # Select "Claude Desktop" when prompted
 make start
 ```
 
@@ -283,7 +303,17 @@ make start
 
 ### Step 2: Configure Claude Desktop
 
-Merge the generated config into Claude Desktop's config file:
+**Option A — Automatic (recommended):**
+
+```bash
+bash scripts/install-claude-desktop.sh
+```
+
+This auto-merges the DFIReballz MCP config into Claude Desktop's config file (creates a backup first).
+
+**Option B — Manual:**
+
+Merge the contents of `.mcp.json` into Claude Desktop's config file:
 
 - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -291,11 +321,54 @@ Merge the generated config into Claude Desktop's config file:
 
 ### Step 3: Restart Claude Desktop
 
-Restart the app. MCP tools should appear and be available.
+Restart the app. MCP tools should appear and be available in the tool picker.
 
 ---
 
-## Tutorial 4: MCPHost + Ollama
+## Tutorial 4: ChatGPT
+
+> **Note:** ChatGPT uses HTTP/SSE transport, not stdio. You need the mcpo proxy to bridge MCP servers as HTTP endpoints.
+
+### Step 1: Start with OpenWebUI profile
+
+```bash
+make setup              # Select "ChatGPT" when prompted
+make start-openwebui    # Starts mcpo proxy on port 8812
+```
+
+### Step 2: Make your machine reachable
+
+ChatGPT needs to reach your mcpo proxy over the internet. Options:
+
+```bash
+# Option A: ngrok tunnel (easiest)
+ngrok http 8812
+
+# Option B: cloudflared tunnel
+cloudflared tunnel --url http://localhost:8812
+```
+
+### Step 3: Configure ChatGPT
+
+1. Go to **ChatGPT** → **Settings** → **Connectors** → **Advanced** → **Developer Mode**
+2. Add a new MCP server with your public URL (from ngrok/cloudflared)
+3. Each server is available at: `https://YOUR_TUNNEL_URL/<server-name>/`
+
+### Available endpoints
+
+| Endpoint | Server |
+|----------|--------|
+| `/kali-forensics/` | Kali forensics tools |
+| `/osint/` | OSINT tools |
+| `/threat-intel/` | Threat intelligence |
+| `/winforensics/` | Windows forensics |
+| `/binary-analysis/` | Binary analysis |
+| `/network-forensics/` | Network forensics |
+| `/filesystem/` | File access |
+
+---
+
+## Tutorial 5: MCPHost + Ollama
 
 > **Important:** Ollama has NO native MCP support. [MCPHost](https://github.com/mark3labs/mcphost) is the required bridge.
 
@@ -315,11 +388,9 @@ ollama pull qwen3:8b
 ### Step 3: Start DFIReballz
 
 ```bash
-make setup      # Select "MCPHost + Ollama" when prompted for MCP host
+make setup      # Select "MCPHost + Ollama" when prompted
 make start
 ```
-
-> If you already ran setup with a different host, regenerate: `make configure-mcp MCP_HOST=mcphost`
 
 ### Step 4: Launch MCPHost
 
@@ -342,7 +413,7 @@ Verify tool calling: `ollama show <model> | grep capabilities`
 
 ---
 
-## Tutorial 5: Open WebUI + Ollama
+## Tutorial 6: Open WebUI + Ollama
 
 ### Step 1: Start everything
 
@@ -403,10 +474,41 @@ STEP 5: AI WRITES THE FORENSIC REPORT
   MITRE ATT&CK mapping, remediation, chain of custody log.
         |
         v
-STEP 6: REPORT EXPORTED TO HOST
-  ./reports/ → HTML, PDF, Markdown reports
-  ./results/ → Session JSON, structured forensic data
+STEP 6: OUTPUT AVAILABLE ON HOST
+  ./reports/    → HTML, PDF, Markdown forensic reports
+  ./results/    → Session JSON, structured forensic data
+  ./output/     → Findings, screenshots, logs, exports, timelines
 ```
+
+---
+
+## Host Directory Layout
+
+All data directories are bind-mounted between your host and containers:
+
+```
+dfireballz/
+├── evidence/         Evidence files — mounted READ-ONLY in all containers
+│                     Place your disk images, memory dumps, PCAPs, etc. here.
+│
+├── cases/            Working case files — writable by containers
+│                     Tool output, intermediate results, case metadata.
+│
+├── reports/          Generated forensic reports — writable by containers
+│                     HTML, PDF, Markdown reports organized by date.
+│
+├── results/          Session data — writable by Claude Code container
+│                     ForensicPayload JSON, session state.
+│
+└── output/           Investigation output — visible on your host machine
+    ├── findings/     Analysis results, summaries, IOC lists
+    ├── screenshots/  Captured screenshots and visual evidence
+    ├── logs/         Investigation activity and audit logs
+    ├── exports/      Carved files, extracted objects, filtered PCAPs
+    └── timelines/    Reconstructed event timelines
+```
+
+> **Why `output/` exists:** When Claude Code runs in a container, files it creates inside the container are not visible on your host unless they're in a bind-mounted directory. The `output/` directory ensures all investigation artifacts are immediately accessible on your host.
 
 ---
 
@@ -417,7 +519,7 @@ STEP 6: REPORT EXPORTED TO HOST
 | **kali-forensics** | Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool | Custom |
 | **winforensics** | MFT, ShellBags, LNK, Registry, EVTX, Prefetch, browser history, Chainsaw | [x746b/winforensics-mcp](https://github.com/x746b/winforensics-mcp) |
 | **osint** | Maigret, Sherlock, Holehe, theHarvester, DNSTwist, subfinder, amass, h8mail | Custom |
-| **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan, NVD | Custom |
+| **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan, NVD, IOC enrichment | Custom |
 | **binary-analysis** | Ghidra headless, Radare2, Capa, YARA, pefile, lief, entropy analysis | Adapted from [FuzzingLabs](https://github.com/FuzzingLabs/mcp-security-hub) |
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S, GeoIP | Adapted from [PreistlyPython](https://github.com/PreistlyPython/wireshark-mcp) |
 | **filesystem** | Scoped file access (/cases, /evidence, /reports) — evidence always read-only | [@modelcontextprotocol/server-filesystem](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem) |
@@ -440,22 +542,9 @@ STEP 6: REPORT EXPORTED TO HOST
 
 ---
 
-## Report Export
-
-Reports generated inside containers are automatically available on the host via bind mounts:
-
-```
-./reports/     → /reports inside containers  (HTML, PDF, Markdown reports)
-./results/     → /results inside containers  (session JSON, ForensicPayload data)
-```
-
-Reports are organized by date: `reports/reports-DDMMYYYY/report-<case-id>-DDMMYYYY.<format>`
-
----
-
 ## API Keys Setup
 
-API keys are entered during `make setup` and stored in `.env`. They are injected into MCP server containers as environment variables.
+API keys are entered during `make setup` and stored in `.env`. They are injected into MCP server containers as environment variables. You can edit `.env` directly at any time — no need to re-run setup.
 
 | Service | Used By | Free Tier | Get Key |
 |---------|---------|-----------|---------|
@@ -514,6 +603,16 @@ Evidence is mounted read-only inside containers at `/evidence`. Ensure files exi
 ls -la ./evidence/
 ```
 
+### Output not appearing on host
+
+Check that the `output/` directory exists and has correct permissions:
+
+```bash
+ls -la ./output/
+# If missing, recreate:
+mkdir -p output/{findings,screenshots,logs,exports,timelines}
+```
+
 ### Container keeps restarting
 
 Check its logs for the specific error:
@@ -563,7 +662,7 @@ make start / make up    # Start all services (10 containers)
 make stop / make down   # Stop all services
 make restart            # Restart all services
 make claude-code        # Launch Claude Code in Docker (interactive)
-make start-openwebui    # Start with Open WebUI + Ollama
+make start-openwebui    # Start with Open WebUI + Ollama (also for ChatGPT)
 make dev                # Start in dev mode (hot reload)
 
 # Status & Monitoring
@@ -649,6 +748,7 @@ dfireballz/
 ├── scripts/
 │   ├── setup.sh                 # Interactive setup wizard
 │   ├── configure_mcp.sh         # MCP config generator
+│   ├── install-claude-desktop.sh # Auto-merge MCP config into Claude Desktop
 │   ├── check-requirements.sh    # Prerequisite checker
 │   └── smoke-test.sh            # Container smoke tests
 ├── playbooks/                   # Investigation playbook definitions
@@ -656,6 +756,12 @@ dfireballz/
 ├── evidence/                    # Evidence files (mounted read-only)
 ├── reports/                     # Generated reports (bind-mounted to host)
 ├── results/                     # Session data (bind-mounted to host)
+├── output/                      # Investigation output (bind-mounted to host)
+│   ├── findings/                # Analysis results and summaries
+│   ├── screenshots/             # Visual evidence captures
+│   ├── logs/                    # Activity and audit logs
+│   ├── exports/                 # Carved files and extracted objects
+│   └── timelines/               # Event timeline reconstructions
 ├── .claude/
 │   ├── settings.json            # Claude Code hooks config
 │   ├── hooks/
@@ -664,6 +770,7 @@ dfireballz/
 ├── docker-compose.yml           # All services defined here
 ├── Makefile                     # All commands via make
 ├── CLAUDE.md                    # Project instructions for AI
+├── DOCKER.md                    # Docker Hub documentation
 └── .mcp.json                    # MCP config for host-installed Claude Code
 ```
 
@@ -675,8 +782,9 @@ dfireballz/
 - **Evidence integrity**: Evidence volumes are mounted read-only in all MCP containers. Chain of custody is enforced at the database level.
 - **No `shell=True`**: All subprocess calls in MCP servers use `subprocess.run(args_list, shell=False)` to prevent command injection.
 - **API key encryption**: Threat-intel API keys are stored encrypted via PostgreSQL pgcrypto.
-- **Non-root containers**: All MCP server containers run as non-root users with `no-new-privileges` security opt.
+- **Non-root containers**: All MCP server containers run as non-root users with `no-new-privileges` security opt (except network-forensics, which needs inherited capabilities for packet capture).
 - **Network isolation**: All containers communicate on the internal `dfireballz-net` bridge network. Only the orchestrator (8800) exposes a port to the host.
+- **Output volumes**: The `output/` directory is writable by the Claude Code container. It contains investigation findings, not evidence. Evidence is always read-only.
 
 ---
 

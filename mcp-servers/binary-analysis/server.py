@@ -18,6 +18,7 @@ mcp = FastMCP(
 
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
+REPORTS_DIR = Path("/reports")
 
 
 def _run(args: list[str], timeout: int = 300) -> dict:
@@ -35,13 +36,16 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 def _validate_path(path: str) -> Path:
     """Validate file path."""
     resolved = Path(path).resolve()
-    for d in [EVIDENCE_DIR, CASES_DIR]:
-        if str(resolved).startswith(str(d.resolve())):
+    for d in [EVIDENCE_DIR, CASES_DIR, REPORTS_DIR]:
+        d_resolved = d.resolve()
+        if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved
     raise ValueError(f"Path {path} is outside allowed directories")
 
@@ -127,9 +131,13 @@ def strings_extract(file_path: str, min_length: int = 4, encoding: str = "both")
 
     Args:
         file_path: Path to binary file
-        min_length: Minimum string length
+        min_length: Minimum string length (1-100)
         encoding: Encoding to search (ascii, unicode, both)
     """
+    allowed_encodings = ("ascii", "unicode", "both")
+    if encoding not in allowed_encodings:
+        return {"error": f"encoding must be one of: {allowed_encodings}"}
+    min_length = max(1, min(min_length, 100))
     path = _validate_path(file_path)
     results = {}
 
@@ -188,6 +196,11 @@ def radare2_analyze(binary_path: str, command: str = "aaa;afl") -> dict:
         binary_path: Path to binary file
         command: r2 command sequence (e.g., 'aaa;afl' for full analysis + function list)
     """
+    # Block shell escape commands — r2pipe '!' prefix executes shell commands
+    for cmd_part in command.split(";"):
+        cmd_part = cmd_part.strip()
+        if cmd_part.startswith("!") or cmd_part.startswith("#!"):
+            return {"error": "Shell commands (! prefix) are not allowed in r2 commands"}
     path = _validate_path(binary_path)
     try:
         import r2pipe
@@ -225,14 +238,15 @@ def yara_match(binary_path: str, rule_set: str = "community") -> dict:
         rule_set: Rule set to use (community, custom, or path to .yar file)
     """
     path = _validate_path(binary_path)
-    rules_dir = "/app/yara-rules"
+    rules_dir = Path("/app/yara-rules")
 
     if rule_set == "community":
-        rules_path = f"{rules_dir}/index.yar"
+        rules_path = str(rules_dir / "index.yar")
     elif rule_set == "custom":
-        rules_path = f"{rules_dir}/custom.yar"
+        rules_path = str(rules_dir / "custom.yar")
     else:
-        rules_path = rule_set
+        # Validate custom rule paths against allowed directories
+        rules_path = str(_validate_path(rule_set))
 
     try:
         import yara

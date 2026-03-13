@@ -18,6 +18,7 @@ mcp = FastMCP(
 
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
+REPORTS_DIR = Path("/reports")
 
 
 def _run(args: list[str], timeout: int = 300) -> dict:
@@ -39,6 +40,8 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
@@ -47,7 +50,8 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
     if allowed_dirs is None:
         allowed_dirs = [EVIDENCE_DIR, CASES_DIR]
     for d in allowed_dirs:
-        if str(resolved).startswith(str(d.resolve())):
+        d_resolved = d.resolve()
+        if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved
     raise ValueError(f"Path {path} is outside allowed directories")
 
@@ -101,7 +105,7 @@ def bulk_extract(image_path: str, output_dir: str) -> dict:
         output_dir: Output directory for extracted artifacts
     """
     path = _validate_path(image_path)
-    out = _validate_path(output_dir, [CASES_DIR])
+    out = _validate_path(output_dir, [CASES_DIR, REPORTS_DIR])
     return _run(["bulk_extractor", "-o", str(out), str(path)], timeout=1800)
 
 
@@ -167,7 +171,7 @@ def yara_scan(target_path: str, rules_path: str) -> dict:
 
 @mcp.tool()
 def dc3dd_hash(file_path: str, algorithm: str = "sha256") -> dict:
-    """Compute forensic hash of a file using dc3dd for chain of custody.
+    """Compute forensic hash of a file for chain of custody verification.
 
     Args:
         file_path: Path to file to hash

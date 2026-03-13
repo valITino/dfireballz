@@ -1,0 +1,32 @@
+DFIReballz — Investigation Output Directory
+============================================
+
+This directory is bind-mounted into the Claude Code container at /workspace/output.
+All investigation findings produced by the AI are saved here so you can access
+them directly on your host machine.
+
+Directory Structure
+-------------------
+
+  findings/     Analysis results, summaries, IOC lists, MITRE ATT&CK mappings.
+                The AI writes structured output here after completing analyses.
+
+  screenshots/  Captured screenshots and visual evidence.
+                Any screen captures or diagrams produced during investigation.
+
+  logs/         Investigation activity logs and audit trails.
+                Session logs, tool invocation records, chain of custody entries.
+
+  exports/      Exported artifacts: carved files, extracted objects, PCAPs.
+                Files extracted from evidence by forensic tools (foremost,
+                tshark --export-objects, bulk_extractor, etc.).
+
+  timelines/    Reconstructed event timelines.
+                Chronological event reconstructions from filesystem, network,
+                and memory analysis.
+
+Notes
+-----
+- Evidence files go in ../evidence/ (mounted read-only in containers).
+- Reports go in ../reports/ (forensic reports in HTML/PDF/Markdown).
+- This directory is for working output only — not evidence or final reports.
