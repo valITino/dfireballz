@@ -267,7 +267,17 @@ echo -e "${BOLD}[6/7] Pulling pre-built Docker images from Docker Hub...${NC}"
 echo -e "  ${DIM}Images: docker.io/crhacky/dfireballz:*${NC}"
 echo ""
 
-docker compose pull --ignore-pull-failures 2>&1 | grep -E "Pulled|Pulling|Error|exists" || true
+if docker compose pull; then
+    echo ""
+    echo -e "  ${CHECK} All images pulled successfully"
+else
+    echo ""
+    echo -e "  ${CROSS} Some images failed to pull — check the errors above."
+    echo -e "  ${DIM}  You can retry later with 'make pull' or build locally with 'make build'.${NC}"
+    echo ""
+    read -rp "  Continue setup anyway? [y/N] " CONTINUE_PULL
+    case "$CONTINUE_PULL" in [yY]*) ;; *) exit 1 ;; esac
+fi
 
 echo ""
 
