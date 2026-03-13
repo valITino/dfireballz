@@ -244,7 +244,9 @@ def wireshark_split_pcap(
         "filesize": ["-b", f"filesize:{value}"],
         "duration": ["-b", f"duration:{value}"],
     }
-    flags = split_flags.get(split_by, ["-c", str(value)])
+    if split_by not in split_flags:
+        return {"error": f"split_by must be one of: {list(split_flags.keys())}"}
+    flags = split_flags[split_by]
     cmd = ["editcap"] + flags + [str(path), f"{out}/split.pcap"]
     return _run(cmd)
 
@@ -309,12 +311,11 @@ def wireshark_security_audit(filepath: str) -> dict:
 
 
 @mcp.tool()
-def wireshark_generate_filter(description: str, complexity: str = "basic") -> dict:
+def wireshark_generate_filter(description: str) -> dict:
     """Generate a Wireshark display filter from a natural language description.
 
     Args:
         description: Natural language description of what to filter
-        complexity: Filter complexity — basic | intermediate | advanced
     """
     filter_map = {
         "http": "http",
