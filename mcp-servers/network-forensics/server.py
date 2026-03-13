@@ -147,6 +147,9 @@ def wireshark_get_conversations(filepath: str, transport: str = "tcp") -> dict:
         filepath: Path to PCAP file
         transport: Transport type — tcp | udp | ip | ethernet
     """
+    allowed_transports = ("tcp", "udp", "ip", "ethernet")
+    if transport not in allowed_transports:
+        return {"error": f"transport must be one of: {allowed_transports}"}
     path = _validate_path(filepath)
     return _run(["tshark", "-r", str(path), "-q", "-z", f"conv,{transport}"])
 
@@ -164,6 +167,9 @@ def wireshark_follow_stream(
         stream_type: Stream type — tcp | udp | http
         stream_index: Stream index to follow
     """
+    allowed_types = ("tcp", "udp", "http")
+    if stream_type not in allowed_types:
+        return {"error": f"stream_type must be one of: {allowed_types}"}
     path = _validate_path(filepath)
     follow_arg = f"follow,{stream_type},ascii,{stream_index}"
     return _run(["tshark", "-r", str(path), "-q", "-z", follow_arg])
@@ -203,6 +209,9 @@ def wireshark_export_objects(
         protocol: Protocol to extract objects from — http | smb | ftp | dicom
         output_dir: Output directory for extracted objects
     """
+    allowed_protocols = ("http", "smb", "ftp", "dicom")
+    if protocol not in allowed_protocols:
+        return {"error": f"protocol must be one of: {allowed_protocols}"}
     path = _validate_path(filepath)
     out_dir = output_dir or f"/cases/exported_{path.stem}_{protocol}"
     _validate_path(out_dir, [CASES_DIR, REPORTS_DIR])

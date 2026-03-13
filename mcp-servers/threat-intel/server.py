@@ -129,6 +129,7 @@ def _threatfox_lookup(ioc: str) -> dict:
             json={"query": "search_ioc", "search_term": ioc},
             timeout=30,
         )
+        resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
         return {"error": str(e)}

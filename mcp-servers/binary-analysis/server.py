@@ -229,14 +229,15 @@ def yara_match(binary_path: str, rule_set: str = "community") -> dict:
         rule_set: Rule set to use (community, custom, or path to .yar file)
     """
     path = _validate_path(binary_path)
-    rules_dir = "/app/yara-rules"
+    rules_dir = Path("/app/yara-rules")
 
     if rule_set == "community":
-        rules_path = f"{rules_dir}/index.yar"
+        rules_path = str(rules_dir / "index.yar")
     elif rule_set == "custom":
-        rules_path = f"{rules_dir}/custom.yar"
+        rules_path = str(rules_dir / "custom.yar")
     else:
-        rules_path = rule_set
+        # Validate custom rule paths against allowed directories
+        rules_path = str(_validate_path(rule_set))
 
     try:
         import yara
