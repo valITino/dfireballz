@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import subprocess
+import zipfile
 from pathlib import Path
 
 from fastmcp import FastMCP
@@ -213,6 +214,39 @@ def sleuthkit_analyze(image_path: str, command: str, args: str | None = None) ->
     if args:
         cmd.extend(args.split())
     return _run(cmd)
+
+
+@mcp.tool()
+def extract_archive(archive_path: str, output_dir: str) -> dict:
+    """Extract a ZIP archive to a writable directory.
+
+    Args:
+        archive_path: Path to the ZIP file (e.g., /evidence/artifacts.zip)
+        output_dir: Destination directory under /cases (e.g., /cases/case-1/artifacts)
+    """
+    src = _validate_path(archive_path, [EVIDENCE_DIR, CASES_DIR])
+    dst = _validate_path(output_dir, [CASES_DIR])
+
+    if not src.exists():
+        return {"error": f"Archive not found: {src}"}
+    if not zipfile.is_zipfile(src):
+        return {"error": f"Not a valid ZIP file: {src}"}
+
+    dst.mkdir(parents=True, exist_ok=True)
+
+    with zipfile.ZipFile(src, "r") as zf:
+        bad = [n for n in zf.namelist() if n.startswith("/") or ".." in n]
+        if bad:
+            return {"error": f"Archive contains unsafe paths: {bad}"}
+        zf.extractall(dst)
+        extracted = zf.namelist()
+
+    return {
+        "archive": str(src),
+        "output_dir": str(dst),
+        "files_extracted": len(extracted),
+        "listing": extracted[:200],
+    }
 
 
 if __name__ == "__main__":
