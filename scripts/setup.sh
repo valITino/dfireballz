@@ -151,26 +151,39 @@ if [ -n "$URLSCAN_KEY" ]; then
     sed -i "s|URLSCAN_API_KEY=|URLSCAN_API_KEY=${URLSCAN_KEY}|" .env
 fi
 
-# Anthropic API key (required for Claude Code Docker container)
-echo ""
-echo "  Claude Code in Docker requires an API key (OAuth login is unreliable"
-echo "  inside containers). Get one at:"
-echo "    https://console.anthropic.com/settings/keys"
-echo ""
-echo "  You can also set this later with: make setup-api-key"
-echo ""
-read -rp "  Anthropic API Key (required for 'make claude-code'): " ANTHROPIC_KEY
-if [ -n "$ANTHROPIC_KEY" ]; then
-    # Append to .env if not present, or update existing
-    if grep -q '^ANTHROPIC_API_KEY=' .env; then
-        sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
-    elif grep -q '^# ANTHROPIC_API_KEY=' .env; then
-        sed -i "s|^# ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
-    else
-        echo "" >> .env
-        echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
-        echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> .env
+# Anthropic API key — only relevant for containerized Claude Code
+if [ "$MCP_HOST" = "claude-code" ]; then
+    echo ""
+    echo "  Claude Code in Docker supports two auth methods:"
+    echo ""
+    echo "    1) API key (recommended for Docker) — pay-per-use billing"
+    echo "       Get one at: https://console.anthropic.com/settings/keys"
+    echo ""
+    echo "    2) OAuth token — uses your Pro/Max subscription quota"
+    echo "       Generate with: claude setup-token"
+    echo "       Then set CLAUDE_CODE_OAUTH_TOKEN in .env"
+    echo ""
+    echo "    3) Interactive login — leave both blank, log in on first run"
+    echo "       Auth persists across restarts in the claude-config volume."
+    echo ""
+    echo "  You can set this later with: make setup-api-key"
+    echo ""
+    read -rp "  Anthropic API Key (Enter to skip): " ANTHROPIC_KEY
+    if [ -n "$ANTHROPIC_KEY" ]; then
+        if grep -q '^ANTHROPIC_API_KEY=' .env; then
+            sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
+        elif grep -q '^# ANTHROPIC_API_KEY=' .env; then
+            sed -i "s|^# ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_KEY}|" .env
+        else
+            echo "" >> .env
+            echo "# ─── Claude Code (Docker container) ──────────────────────────────" >> .env
+            echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}" >> .env
+        fi
     fi
+else
+    echo ""
+    echo "  Skipping Anthropic API key (only needed for 'make claude-code')."
+    echo "  Set it later with: make setup-api-key"
 fi
 
 echo ""

@@ -28,14 +28,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root
+# Startup script: copy and make executable while still root.
+COPY docker/claude-code-entrypoint.sh /usr/local/bin/claude-code-entrypoint.sh
+RUN chmod +x /usr/local/bin/claude-code-entrypoint.sh
+
+# Non-root user (matches node:22-slim's built-in 'node' user)
+RUN mkdir -p /workspace /home/node/.claude \
+    && chown -R node:node /workspace /home/node/.claude
+
+USER node
+WORKDIR /workspace
 
 # Pre-configure MCP servers — stdio transport via docker exec -i.
 # Claude Code auto-discovers .mcp.json in the working directory.
-COPY docker/mcp.json /root/.mcp.json
-
-# Startup script: checks each MCP server, shows status, launches Claude.
-COPY docker/claude-code-entrypoint.sh /usr/local/bin/claude-code-entrypoint.sh
-RUN chmod +x /usr/local/bin/claude-code-entrypoint.sh
+COPY --chown=node:node docker/mcp.json /workspace/.mcp.json
 
 ENTRYPOINT ["/usr/local/bin/claude-code-entrypoint.sh"]

@@ -74,8 +74,8 @@ case $MCP_HOST in
         echo "  make claude-code"
         echo ""
         echo "The containerized version waits for all MCP servers to be healthy"
-        echo "before starting.  Uses Anthropic account login by default."
-        echo "Set ANTHROPIC_API_KEY in .env only if you prefer API key auth."
+        echo "before starting.  Auth options: API key, OAuth token, or interactive login."
+        echo "See config/.env.example for details."
         ;;
 
     claude-desktop)

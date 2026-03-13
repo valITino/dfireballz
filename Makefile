@@ -167,25 +167,34 @@ setup-api-key:
 	echo ""
 
 claude-code:
-	@if [ -z "$${ANTHROPIC_API_KEY:-}" ] && ! grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
+	@MCP_HOST_VAL=$$(grep '^MCP_HOST=' .env 2>/dev/null | cut -d= -f2); \
+	if [ -n "$$MCP_HOST_VAL" ] && [ "$$MCP_HOST_VAL" != "claude-code" ]; then \
 		echo ""; \
-		echo "  ⚠️  No ANTHROPIC_API_KEY found."; \
+		echo "  Note: MCP_HOST is set to '$$MCP_HOST_VAL' in .env, but 'make claude-code'"; \
+		echo "  runs its own containerized Claude Code with a built-in MCP config."; \
+		echo "  The host .mcp.json (for $$MCP_HOST_VAL) is separate from the container's."; \
 		echo ""; \
-		echo "     API key auth is required for Claude Code in Docker."; \
-		echo "     (OAuth login inside containers is unreliable and may"; \
-		echo "      show 'Not logged in' even after successful login.)"; \
+	fi
+	@HAS_API_KEY=false; \
+	HAS_OAUTH=false; \
+	if [ -n "$${ANTHROPIC_API_KEY:-}" ] || grep -q '^ANTHROPIC_API_KEY=.' .env 2>/dev/null; then \
+		HAS_API_KEY=true; \
+	fi; \
+	if [ -n "$${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || grep -q '^CLAUDE_CODE_OAUTH_TOKEN=.' .env 2>/dev/null; then \
+		HAS_OAUTH=true; \
+	fi; \
+	if [ "$$HAS_API_KEY" = "false" ] && [ "$$HAS_OAUTH" = "false" ]; then \
 		echo ""; \
-		echo "     Quick setup:"; \
-		echo "       make setup-api-key"; \
+		echo "  No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN found."; \
 		echo ""; \
-		echo "     Or export directly:"; \
-		echo "       export ANTHROPIC_API_KEY=sk-ant-..."; \
-		echo "       make claude-code"; \
+		echo "  Auth options:"; \
+		echo "    1) API key:     make setup-api-key"; \
+		echo "    2) OAuth token: set CLAUDE_CODE_OAUTH_TOKEN in .env"; \
+		echo "    3) Interactive: continue — log in on first launch"; \
+		echo "       (credentials persist in the claude-config Docker volume)"; \
 		echo ""; \
-		echo "     Get your key at: https://console.anthropic.com/settings/keys"; \
-		echo ""; \
-		read -rp "  Continue without API key anyway? [y/N] " yn; \
-		case "$$yn" in [yY]*) ;; *) exit 1 ;; esac; \
+		read -rp "  Continue with interactive login? [Y/n] " yn; \
+		case "$$yn" in [nN]*) exit 1 ;; esac; \
 	fi
 	docker compose --profile claude-code pull --ignore-pull-failures
 	docker compose --profile claude-code run --rm claude-code

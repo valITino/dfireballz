@@ -231,18 +231,25 @@ services:
     stdin_open: true
     tty: true
     environment:
-      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      # Auth: entrypoint unsets empty values to prevent accidental API billing.
+      # Set exactly ONE of these in .env, or leave both unset for interactive login.
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY-}"
+      CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN-}"
+      DFIREBALLZ_CONTAINER: "1"
       no_proxy: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
       NO_PROXY: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
     dns:
       - 8.8.8.8
       - 1.1.1.1
     volumes:
-      - ./cases:/cases
-      - ./evidence:/evidence:ro
-      - ./reports:/reports
-      - ./results:/results
+      - claude-config:/home/node/.claude
+      - ./cases:/workspace/cases
+      - ./evidence:/workspace/evidence:ro
+      - ./reports:/workspace/reports
+      - ./results:/workspace/results
       - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "${DOCKER_GID:-999}"
     depends_on:
       kali-forensics:
         condition: service_healthy
@@ -323,3 +330,4 @@ volumes:
   db-data:
   redis-data:
   ollama-data:
+  claude-config:
