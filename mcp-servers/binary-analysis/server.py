@@ -36,6 +36,8 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 def _validate_path(path: str) -> Path:

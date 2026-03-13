@@ -14,6 +14,15 @@ CHECK="${GREEN}✓${NC}"
 CROSS="${RED}✗${NC}"
 WARN="${YELLOW}!${NC}"
 
+# Portable sed -i (macOS requires '' argument, GNU does not)
+_sed_i() {
+    if [[ "${OSTYPE:-linux}" == "darwin"* ]]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
 echo ""
 echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}${BOLD}║        DFIReballz — Setup Wizard                    ║${NC}"
@@ -54,8 +63,12 @@ fi
 DOCKER_GID_VALUE=$(stat -c '%g' /var/run/docker.sock 2>/dev/null || getent group docker 2>/dev/null | cut -d: -f3 || echo "999")
 echo -e "  ${CHECK} Docker socket GID: ${DOCKER_GID_VALUE}"
 
-# RAM check
-TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo "0")
+# RAM check (Linux uses /proc/meminfo, macOS uses sysctl)
+if [ -f /proc/meminfo ]; then
+    TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+else
+    TOTAL_RAM_KB=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1024 ))
+fi
 TOTAL_RAM_GB=$((TOTAL_RAM_KB / 1024 / 1024))
 if [ "$TOTAL_RAM_GB" -ge 16 ]; then
     echo -e "  ${CHECK} RAM: ${TOTAL_RAM_GB} GB"
@@ -180,7 +193,7 @@ case $MCP_CHOICE in
     *) MCP_HOST="claude-code" ;;
 esac
 
-sed -i "s|MCP_HOST=claude-code|MCP_HOST=${MCP_HOST}|" .env
+_sed_i "s|MCP_HOST=claude-code|MCP_HOST=${MCP_HOST}|" .env
 echo ""
 echo -e "  ${CHECK} MCP Host: ${MCP_HOST}"
 echo ""
@@ -192,25 +205,23 @@ echo -e "  ${DIM}These threat-intel services offer free tiers. Sign up first if 
 echo -e "  ${DIM}You can add or change keys later in .env — no need to re-run setup.${NC}"
 echo ""
 
-declare -A API_KEYS=(
-    ["VirusTotal"]="VIRUSTOTAL_API_KEY|https://www.virustotal.com/gui/my-apikey"
-    ["Shodan"]="SHODAN_API_KEY|https://account.shodan.io/"
-    ["AbuseIPDB"]="ABUSEIPDB_API_KEY|https://www.abuseipdb.com/account/api"
-    ["URLScan.io"]="URLSCAN_API_KEY|https://urlscan.io/user/signup"
-)
-
-for service in "VirusTotal" "Shodan" "AbuseIPDB" "URLScan.io"; do
-    IFS='|' read -r env_var url <<< "${API_KEYS[$service]}"
+_prompt_key() {
+    local service="$1" env_var="$2" url="$3"
     echo -e "  ${DIM}${url}${NC}"
     read -rp "  ${service} API Key: " KEY_VALUE
     if [ -n "$KEY_VALUE" ]; then
-        sed -i "s|${env_var}=|${env_var}=${KEY_VALUE}|" .env
+        _sed_i "s|${env_var}=|${env_var}=${KEY_VALUE}|" .env
         echo -e "  ${CHECK} Saved"
     else
         echo -e "  ${DIM}  Skipped${NC}"
     fi
     echo ""
-done
+}
+
+_prompt_key "VirusTotal"  "VIRUSTOTAL_API_KEY" "https://www.virustotal.com/gui/my-apikey"
+_prompt_key "Shodan"      "SHODAN_API_KEY"     "https://account.shodan.io/"
+_prompt_key "AbuseIPDB"   "ABUSEIPDB_API_KEY"  "https://www.abuseipdb.com/account/api"
+_prompt_key "URLScan.io"  "URLSCAN_API_KEY"    "https://urlscan.io/user/signup"
 
 # Claude Code auth (only for Docker or host-installed Claude Code)
 if [ "$MCP_CHOICE" = "1" ]; then

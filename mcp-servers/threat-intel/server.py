@@ -6,7 +6,6 @@ VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan.
 import os
 
 import requests
-
 from fastmcp import FastMCP
 
 mcp = FastMCP(
@@ -29,7 +28,7 @@ def _get_key(service: str) -> str:
 # ── Raw implementation functions (callable from enrich_ioc) ──────────
 
 
-def _vt_lookup(indicator: str, type: str = "file_hash") -> dict:
+def _vt_lookup(indicator: str, ioc_type: str = "file_hash") -> dict:
     """Look up an indicator on VirusTotal."""
     api_key = _get_key("virustotal")
     base = "https://www.virustotal.com/api/v3"
@@ -42,11 +41,11 @@ def _vt_lookup(indicator: str, type: str = "file_hash") -> dict:
         "ip": f"{base}/ip_addresses/{indicator}",
     }
 
-    if type not in endpoints:
+    if ioc_type not in endpoints:
         return {"error": f"Invalid type. Must be one of: {list(endpoints.keys())}"}
 
     try:
-        resp = requests.get(endpoints[type], headers=headers, timeout=30)
+        resp = requests.get(endpoints[ioc_type], headers=headers, timeout=30)
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
@@ -165,25 +164,25 @@ def _cve_lookup(cve_id: str) -> dict:
         return {"error": str(e)}
 
 
-def _enrich_ioc(ioc: str, type: str = "auto") -> dict:
+def _enrich_ioc(ioc: str, ioc_type: str = "auto") -> dict:
     """Enrich an IOC by querying all relevant threat intelligence sources."""
-    results: dict = {"ioc": ioc, "type": type, "sources": {}}
+    results: dict = {"ioc": ioc, "type": ioc_type, "sources": {}}
 
     # Auto-detect type
-    if type == "auto":
+    if ioc_type == "auto":
         if ioc.count(".") == 3 and all(p.isdigit() for p in ioc.split(".")):
-            type = "ip"
+            ioc_type = "ip"
         elif ioc.startswith("http"):
-            type = "url"
+            ioc_type = "url"
         elif len(ioc) in (32, 40, 64) and all(
             c in "0123456789abcdefABCDEF" for c in ioc
         ):
-            type = "file_hash"
+            ioc_type = "file_hash"
         elif "@" in ioc:
-            type = "email"
+            ioc_type = "email"
         else:
-            type = "domain"
-        results["type"] = type
+            ioc_type = "domain"
+        results["type"] = ioc_type
 
     def _try_source(name: str, func, *args) -> None:
         try:
@@ -191,22 +190,22 @@ def _enrich_ioc(ioc: str, type: str = "auto") -> dict:
         except Exception as e:
             results["sources"][name] = {"error": str(e)}
 
-    if type == "ip":
+    if ioc_type == "ip":
         _try_source("shodan", _shodan_host, ioc)
         _try_source("abuseipdb", _abuse_ip_check, ioc)
         _try_source("virustotal", _vt_lookup, ioc, "ip")
         _try_source("threatfox", _threatfox_lookup, ioc)
 
-    elif type == "domain":
+    elif ioc_type == "domain":
         _try_source("virustotal", _vt_lookup, ioc, "domain")
         _try_source("threatfox", _threatfox_lookup, ioc)
 
-    elif type == "file_hash":
+    elif ioc_type == "file_hash":
         _try_source("virustotal", _vt_lookup, ioc, "file_hash")
         _try_source("malware_bazaar", _malware_bazaar_lookup, ioc)
         _try_source("threatfox", _threatfox_lookup, ioc)
 
-    elif type == "url":
+    elif ioc_type == "url":
         _try_source("virustotal", _vt_lookup, ioc, "url")
         _try_source("urlscan", _urlscan_lookup, ioc)
 
@@ -226,14 +225,14 @@ def _enrich_ioc(ioc: str, type: str = "auto") -> dict:
 
 
 @mcp.tool()
-def vt_lookup(indicator: str, type: str = "file_hash") -> dict:
+def vt_lookup(indicator: str, ioc_type: str = "file_hash") -> dict:
     """Look up an indicator on VirusTotal.
 
     Args:
         indicator: The indicator value (hash, URL, domain, or IP)
-        type: Indicator type — file_hash | url | domain | ip
+        ioc_type: Indicator type — file_hash | url | domain | ip
     """
-    return _vt_lookup(indicator, type)
+    return _vt_lookup(indicator, ioc_type)
 
 
 @mcp.tool()
@@ -308,14 +307,14 @@ def cve_lookup(cve_id: str) -> dict:
 
 
 @mcp.tool()
-def enrich_ioc(ioc: str, type: str = "auto") -> dict:
+def enrich_ioc(ioc: str, ioc_type: str = "auto") -> dict:
     """Enrich an IOC by querying all relevant threat intelligence sources.
 
     Args:
         ioc: The indicator of compromise value
-        type: IOC type — auto | ip | domain | url | file_hash | email
+        ioc_type: IOC type — auto | ip | domain | url | file_hash | email
     """
-    return _enrich_ioc(ioc, type)
+    return _enrich_ioc(ioc, ioc_type)
 
 
 if __name__ == "__main__":

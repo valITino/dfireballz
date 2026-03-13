@@ -34,6 +34,8 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
@@ -473,18 +475,18 @@ def tcpdump_capture(
     interface: str = "any",
     filter: str | None = None,
     duration: int = 30,
-    output_file: str = "/evidence/capture.pcap",
+    output_file: str = "/cases/capture.pcap",
 ) -> dict:
-    """Capture packets with tcpdump and save to evidence directory.
+    """Capture packets with tcpdump and save to cases directory.
 
     Args:
         interface: Network interface
         filter: BPF filter expression
         duration: Capture duration in seconds (max 300)
-        output_file: Output PCAP file path (must be in /evidence)
+        output_file: Output PCAP file path (must be in /cases or /reports)
     """
     duration = min(duration, 300)
-    out = _validate_path(output_file, [EVIDENCE_DIR])
+    out = _validate_path(output_file, [CASES_DIR, REPORTS_DIR])
 
     cmd = ["tcpdump", "-i", interface, "-w", str(out), "-G", str(duration), "-W", "1"]
     if filter:

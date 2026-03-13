@@ -1,5 +1,6 @@
 """OSINT MCP Server — Aggregates Maigret, Sherlock, Holehe, theHarvester, and more."""
 
+import json
 import subprocess
 
 from fastmcp import FastMCP
@@ -28,19 +29,19 @@ def _run(args: list[str], timeout: int = 300) -> dict:
         return {"error": f"Command timed out after {timeout}s", "returncode": -1}
     except FileNotFoundError:
         return {"error": f"Command not found: {args[0]}", "returncode": -1}
+    except OSError as e:
+        return {"error": f"OS error running {args[0]}: {e}", "returncode": -1}
 
 
 @mcp.tool()
 def username_search(
     username: str,
-    platforms: str | None = None,
     output_format: str = "text",
 ) -> dict:
     """Search for a username across 500+ platforms using Maigret and Sherlock.
 
     Args:
         username: Username to search for
-        platforms: Comma-separated platform list (optional, default: all)
         output_format: Output format (text, json)
     """
     results = {}
@@ -76,17 +77,23 @@ def email_check(email: str) -> dict:
     return results
 
 
+_DEFAULT_HARVESTER_SOURCES = (
+    "anubis,certspotter,crtsh,dnsdumpster,"
+    "hackertarget,rapiddns,subdomaincenter,urlscan"
+)
+
+
 @mcp.tool()
 def harvester_scan(
     domain: str,
-    sources: str = "anubis,certspotter,crtsh,dnsdumpster,hackertarget,rapiddns,subdomaincenter,urlscan",
+    sources: str = _DEFAULT_HARVESTER_SOURCES,
     limit: int = 500,
 ) -> dict:
     """Run theHarvester to find emails, subdomains, hosts, and employee names.
 
     Args:
         domain: Target domain
-        sources: Comma-separated data sources (anubis, certspotter, crtsh, dnsdumpster, hackertarget, rapiddns, subdomaincenter, urlscan)
+        sources: Comma-separated data sources
         limit: Maximum results to return
     """
     cmd = ["theHarvester", "-d", domain, "-b", sources, "-l", str(limit)]
@@ -124,7 +131,13 @@ def dns_twist(domain: str) -> dict:
     Args:
         domain: Target domain to check for lookalikes
     """
-    return _run(["dnstwist", "--format", "json", domain], timeout=120)
+    result = _run(["dnstwist", "--format", "json", domain], timeout=120)
+    if result.get("stdout"):
+        try:
+            result["parsed"] = json.loads(result["stdout"])
+        except json.JSONDecodeError:
+            pass
+    return result
 
 
 @mcp.tool()
