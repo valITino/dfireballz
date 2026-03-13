@@ -14,6 +14,17 @@ CHECK="${GREEN}OK${NC}"
 CROSS="${RED}FAIL${NC}"
 WARN="${YELLOW}WARN${NC}"
 
+# ── Auth guard ─────────────────────────────────────────────────────
+# An empty ANTHROPIC_API_KEY forces Claude Code into "API Usage Billing"
+# mode, overriding subscription-based auth.  Unset it if blank so
+# Claude Code falls back to interactive login or CLAUDE_CODE_OAUTH_TOKEN.
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  unset ANTHROPIC_API_KEY 2>/dev/null || true
+fi
+if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  unset CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
+fi
+
 # ── Configuration ───────────────────────────────────────────────────
 MAX_RETRIES=20
 RETRY_INTERVAL=3
@@ -78,6 +89,17 @@ wait_for_service() {
 
 print_banner
 
+# Show auth mode so the user knows what's happening
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+  echo -e "  ${BOLD}Auth:${NC} API key ${DIM}(pay-per-use billing)${NC}"
+elif [ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+  echo -e "  ${BOLD}Auth:${NC} OAuth token ${DIM}(subscription)${NC}"
+else
+  echo -e "  ${BOLD}Auth:${NC} Interactive login ${DIM}(will prompt on first use)${NC}"
+  echo -e "  ${DIM}Credentials persist in the claude-config volume across restarts.${NC}"
+fi
+echo ""
+
 echo -e "${BOLD}Checking MCP server containers (via docker exec)...${NC}"
 echo -e "${DIM}Waiting up to $((MAX_RETRIES * RETRY_INTERVAL))s per service.${NC}"
 echo ""
@@ -118,7 +140,7 @@ echo -e "  filesystem         ${DIM}Scoped to /cases, /evidence, /reports${NC}"
 echo ""
 echo -e "  ${BOLD}Quick start:${NC}"
 echo -e "  ${CYAN}/mcp${NC}                          ${DIM}Check MCP server status${NC}"
-echo -e "  ${CYAN}Analyze the memory dump in /evidence${NC}"
+echo -e "  ${CYAN}Analyze the memory dump in evidence/${NC}"
 echo -e "  ${CYAN}Run a full OSINT sweep on user@example.com${NC}"
 echo -e "${DIM}──────────────────────────────────────────────────────${NC}"
 echo ""

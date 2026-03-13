@@ -16,17 +16,20 @@ if [ ! -f ".venv/bin/dfireballz" ]; then
 fi
 
 # Load .env if present (for DB, API keys, etc.)
-# API keys (ANTHROPIC_API_KEY) are intentionally commented out in .env.example
-# — Claude Code provides its own authentication via OAuth.
+# Auth vars (ANTHROPIC_API_KEY, CLAUDE_CODE_OAUTH_TOKEN) are commented out
+# by default in .env.example.  See config/.env.example for auth options.
 if [ -f ".env" ]; then
   set -a
   # shellcheck disable=SC1091
   source .env
   set +a
-  # Unset ANTHROPIC_API_KEY if empty — an empty value can force Claude Code
-  # into "API Usage Billing" mode, overriding account-based authentication.
+  # Unset empty auth vars — an empty value forces Claude Code into
+  # "API Usage Billing" mode, overriding subscription-based auth.
   if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
     unset ANTHROPIC_API_KEY 2>/dev/null || true
+  fi
+  if [ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]; then
+    unset CLAUDE_CODE_OAUTH_TOKEN 2>/dev/null || true
   fi
 fi
 
