@@ -15,6 +15,8 @@ RUN npm install -g @anthropic-ai/claude-code
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     jq \
+    unzip \
+    python3 \
     dnsutils \
     ca-certificates \
     gnupg \
