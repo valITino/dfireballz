@@ -23,7 +23,7 @@ RUN wget -q "https://github.com/radareorg/radare2/releases/latest/download/radar
     r2 -v || echo "WARN: radare2 install may have failed — r2pipe will report errors at runtime"
 
 # Install Ghidra headless
-RUN wget -q "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_11.1.2_build/ghidra_11.1.2_PUBLIC_20240709.zip" -O /tmp/ghidra.zip && \
+RUN wget -q "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.0.4_build/ghidra_12.0.4_PUBLIC_20260303.zip" -O /tmp/ghidra.zip && \
     unzip -q /tmp/ghidra.zip -d /opt && \
     mv /opt/ghidra_* /opt/ghidra && \
     rm /tmp/ghidra.zip
@@ -31,9 +31,13 @@ RUN wget -q "https://github.com/NationalSecurityAgency/ghidra/releases/download/
 ENV GHIDRA_INSTALL_DIR=/opt/ghidra
 ENV PATH="${PATH}:/opt/ghidra/support"
 
-# Install Capa (download and make executable — no || true to surface errors)
-RUN wget -q "https://github.com/mandiant/capa/releases/latest/download/capa-linux" -O /usr/local/bin/capa && \
-    chmod +x /usr/local/bin/capa
+# Install Capa (releases are now zip archives containing the binary)
+ARG CAPA_VERSION=9.3.1
+RUN wget -q "https://github.com/mandiant/capa/releases/download/v${CAPA_VERSION}/capa-v${CAPA_VERSION}-linux.zip" -O /tmp/capa.zip && \
+    unzip -q /tmp/capa.zip -d /tmp/capa-extract && \
+    mv /tmp/capa-extract/capa /usr/local/bin/capa && \
+    chmod +x /usr/local/bin/capa && \
+    rm -rf /tmp/capa.zip /tmp/capa-extract
 
 # Python packages
 RUN pip install --no-cache-dir \
