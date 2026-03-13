@@ -1,13 +1,19 @@
 # Investigation Templates
 
 These templates provide structured workflows for different forensic investigation types.
-Each template instructs the AI to use the available MCP servers and aggregate results
-into a `ForensicPayload` for report generation.
+Each template instructs the AI to use the available MCP servers and their tools, and aggregate
+results into a `ForensicPayload` for report generation.
+
+Every template includes:
+- **MCP server usage instructions** — explicit directions to use the MCP containers and their tools
+- **Host directory layout** — where to read evidence and store output (`/cases/`, `/evidence/`, `/reports/`, `/workspace/output/`)
+- **Documentation & logging requirements** — process logs, issues/errors logs, and incremental findings
 
 ## Available Templates
 
 | Template | Use Case |
 |----------|----------|
+| `complete-investigation` | **All-in-one**: full investigation + response across every domain |
 | `full-investigation` | End-to-end forensic investigation |
 | `malware-analysis` | Static + dynamic malware analysis |
 | `ransomware-investigation` | Ransomware incident response |

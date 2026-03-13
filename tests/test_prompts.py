@@ -7,8 +7,9 @@ from dfireballz.prompts import list_templates, load_template
 
 def test_list_templates():
     templates = list_templates()
-    assert len(templates) >= 9
+    assert len(templates) >= 10
     names = [t["name"] for t in templates]
+    assert "complete-investigation" in names
     assert "malware-analysis" in names
     assert "full-investigation" in names
     assert "incident-response" in names

@@ -9,6 +9,7 @@ _TEMPLATES_DIR = _PROMPTS_DIR / "templates"
 
 # Template registry: slug -> filename
 TEMPLATES = {
+    "complete-investigation": "complete-investigation.md",
     "full-investigation": "full-investigation.md",
     "malware-analysis": "malware-analysis.md",
     "ransomware-investigation": "ransomware-investigation.md",
