@@ -245,6 +245,8 @@ services:
       - 1.1.1.1
     volumes:
       - claude-config:/home/node/.claude
+      - ./.claude/skills:/workspace/.claude/skills:ro
+      - ./CLAUDE.md:/workspace/CLAUDE.md:ro
       - ./cases:/workspace/cases
       - ./evidence:/workspace/evidence:ro
       - ./reports:/workspace/reports
