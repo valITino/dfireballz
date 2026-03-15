@@ -45,4 +45,8 @@ WORKDIR /workspace
 # Claude Code auto-discovers .mcp.json in the working directory.
 COPY --chown=node:node docker/mcp.json /workspace/.mcp.json
 
+# Bake in CLAUDE.md and skills as fallback (volume mounts override at runtime).
+COPY --chown=node:node CLAUDE.md /workspace/CLAUDE.md
+COPY --chown=node:node .claude/skills /workspace/.claude/skills
+
 ENTRYPOINT ["/usr/local/bin/claude-code-entrypoint.sh"]
