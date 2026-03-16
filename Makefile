@@ -173,6 +173,7 @@ setup-api-key:
 	echo ""
 
 claude-code:
+	@mkdir -p cases evidence reports results output/findings output/screenshots output/logs output/exports output/timelines
 	@MCP_HOST_VAL=$$(grep '^MCP_HOST=' .env 2>/dev/null | cut -d= -f2); \
 	if [ -n "$$MCP_HOST_VAL" ] && [ "$$MCP_HOST_VAL" != "claude-code" ]; then \
 		echo ""; \

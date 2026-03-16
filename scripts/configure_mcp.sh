@@ -57,7 +57,7 @@ MCP_CONFIG='{
     },
     "filesystem": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"],
+      "args": ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports", "/output"],
       "description": "Scoped evidence filesystem"
     }
   }
@@ -137,7 +137,7 @@ case $MCP_HOST in
     args: ["exec", "-i", "-e", "PYTHONUNBUFFERED=1", "dfireballz-network-forensics-1", "python3", "-u", "/app/server.py"]
   filesystem:
     command: docker
-    args: ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"]'
+    args: ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports", "/output"]'
 
         echo "$MCPHOST_CONFIG" > "$HOME/.mcphost.yml"
         echo "Written ~/.mcphost.yml"

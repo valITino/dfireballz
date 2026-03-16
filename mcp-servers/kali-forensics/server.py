@@ -20,6 +20,7 @@ mcp = FastMCP(
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
 REPORTS_DIR = Path("/reports")
+OUTPUT_DIR = Path("/output")
 
 
 def _run(args: list[str], timeout: int = 300) -> dict:
@@ -49,7 +50,7 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
     """Validate and resolve file path to prevent path traversal."""
     resolved = Path(path).resolve()
     if allowed_dirs is None:
-        allowed_dirs = [EVIDENCE_DIR, CASES_DIR]
+        allowed_dirs = [EVIDENCE_DIR, CASES_DIR, OUTPUT_DIR]
     for d in allowed_dirs:
         d_resolved = d.resolve()
         if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):

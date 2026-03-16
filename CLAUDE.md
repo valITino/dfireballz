@@ -103,7 +103,7 @@ should reflect the context of a professional forensic investigator.
 | `threat-intel` | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan |
 | `binary-analysis` | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, Binwalk |
 | `network-forensics` | tshark (18 tools), tcpdump capture, PCAP carving, JA3/JA3S, GeoIP |
-| `filesystem` | Scoped to /cases, /evidence, /reports — evidence always read-only |
+| `filesystem` | Scoped to /cases, /evidence, /reports, /output — evidence always read-only |
 
 ## Code Standards
 - All Python code must be type-annotated

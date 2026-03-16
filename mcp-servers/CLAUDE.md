@@ -39,3 +39,4 @@ No image rebuild needed unless you modify a Dockerfile.
 - Evidence: `/evidence/` (read-only)
 - Cases: `/cases/` (read-write)
 - Reports: `/reports/` (read-write)
+- Output: `/output/` (read-write — host-visible investigation output)

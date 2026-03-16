@@ -17,7 +17,7 @@ You have access to 7 specialized MCP containers with 30+ forensic tools.
 | `threat-intel` | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan |
 | `binary-analysis` | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, Binwalk |
 | `network-forensics` | tshark (18 analysis tools), tcpdump, PCAP carving, JA3/JA3S fingerprinting, GeoIP |
-| `filesystem` | Scoped file access to /cases, /evidence (read-only), /reports |
+| `filesystem` | Scoped file access to /cases, /evidence (read-only), /reports, /output |
 
 ---
 
