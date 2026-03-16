@@ -151,7 +151,7 @@ Everything runs in Docker. No forensic tools on your host. All findings land in 
 | **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan | — | default |
 | **binary-analysis** | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, binwalk | — | default |
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S | — | default |
-| **filesystem** | Scoped file access to /cases, /evidence (read-only), /reports | — | default |
+| **filesystem** | Scoped file access to /cases, /evidence (read-only), /reports, /output | — | default |
 | **orchestrator** | FastAPI — cases, evidence, playbooks, chain of custody | `8800` | default |
 | **db** | PostgreSQL with pgcrypto (encrypted API key storage) | — | default |
 | **redis** | Redis cache | — | default |
@@ -442,7 +442,7 @@ dfireballz/
 | **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan, NVD | Custom |
 | **binary-analysis** | Ghidra headless, Radare2, Capa, YARA, pefile, lief, entropy analysis | Adapted from [FuzzingLabs](https://github.com/FuzzingLabs/mcp-security-hub) |
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S, GeoIP | Adapted from [PreistlyPython](https://github.com/PreistlyPython/wireshark-mcp) |
-| **filesystem** | Scoped file access (/cases, /evidence, /reports) — evidence always read-only | [@modelcontextprotocol/server-filesystem](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem) |
+| **filesystem** | Scoped file access (/cases, /evidence, /reports, /output) — evidence always read-only | [@modelcontextprotocol/server-filesystem](https://www.npmjs.com/package/@modelcontextprotocol/server-filesystem) |
 
 ---
 

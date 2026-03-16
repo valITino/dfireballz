@@ -32,7 +32,7 @@
     },
     "filesystem": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports"],
+      "args": ["exec", "-i", "dfireballz-filesystem-1", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/cases", "/evidence", "/reports", "/output"],
       "description": "Scoped evidence filesystem"
     }
   }

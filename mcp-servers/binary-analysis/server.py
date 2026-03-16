@@ -19,6 +19,7 @@ mcp = FastMCP(
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
 REPORTS_DIR = Path("/reports")
+OUTPUT_DIR = Path("/output")
 
 
 def _run(args: list[str], timeout: int = 300) -> dict:
@@ -43,7 +44,7 @@ def _run(args: list[str], timeout: int = 300) -> dict:
 def _validate_path(path: str) -> Path:
     """Validate file path."""
     resolved = Path(path).resolve()
-    for d in [EVIDENCE_DIR, CASES_DIR, REPORTS_DIR]:
+    for d in [EVIDENCE_DIR, CASES_DIR, REPORTS_DIR, OUTPUT_DIR]:
         d_resolved = d.resolve()
         if resolved == d_resolved or str(resolved).startswith(str(d_resolved) + "/"):
             return resolved

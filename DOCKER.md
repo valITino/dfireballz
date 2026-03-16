@@ -36,7 +36,7 @@ docker compose pull
 | `crhacky/dfireballz:threat-intel` | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan | ~500 MB |
 | `crhacky/dfireballz:binary-analysis` | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile | ~3 GB |
 | `crhacky/dfireballz:network-forensics` | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3 | ~500 MB |
-| `crhacky/dfireballz:filesystem` | Scoped file access to /cases, /evidence (read-only), /reports | ~200 MB |
+| `crhacky/dfireballz:filesystem` | Scoped file access to /cases, /evidence (read-only), /reports, /output | ~200 MB |
 | `crhacky/dfireballz:orchestrator` | FastAPI — cases, evidence, playbooks, chain of custody | ~300 MB |
 | `crhacky/dfireballz:claude-code` | Claude Code CLI + investigation skills (no host install needed) | ~500 MB |
 | `crhacky/dfireballz:db` | PostgreSQL with pgcrypto for encrypted API key storage | ~300 MB |

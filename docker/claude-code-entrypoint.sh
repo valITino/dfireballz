@@ -120,7 +120,7 @@ verify_bind_mounts() {
   done
   if [ "$has_warning" = "true" ]; then
     echo -e "  ${DIM}Hint: ensure host directories exist and are writable before starting.${NC}"
-    echo -e "  ${DIM}Run 'make start' or 'mkdir -p output reports && chmod 777 output reports' on the host.${NC}"
+    echo -e "  ${DIM}Run 'make start' on the host to create directories with correct permissions.${NC}"
     echo ""
   fi
 }
@@ -180,7 +180,7 @@ echo -e "  osint              ${DIM}Maigret, Sherlock, Holehe, SpiderFoot, theHa
 echo -e "  threat-intel       ${DIM}VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, URLScan${NC}"
 echo -e "  binary-analysis    ${DIM}Ghidra headless, Radare2, Capa, YARA, pefile${NC}"
 echo -e "  network-forensics  ${DIM}tshark (18 tools), tcpdump, PCAP carving, JA3${NC}"
-echo -e "  filesystem         ${DIM}Scoped to /cases, /evidence, /reports${NC}"
+echo -e "  filesystem         ${DIM}Scoped to /cases, /evidence, /reports, /output${NC}"
 echo ""
 echo -e "  ${BOLD}Investigation Skills (slash commands):${NC}"
 echo -e "  ${CYAN}/malware-analysis /evidence/sample.exe${NC}"

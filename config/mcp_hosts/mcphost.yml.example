@@ -21,4 +21,4 @@ mcpServers:
     args: ["exec", "-i", "dfireballz-network-forensics-1", "python3", "-m", "server"]
   filesystem:
     command: docker
-    args: ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports"]
+    args: ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports", "/output"]

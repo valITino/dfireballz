@@ -28,7 +28,7 @@
     },
     "filesystem": {
       "command": "docker",
-      "args": ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports"]
+      "args": ["exec", "-i", "dfireballz-filesystem-1", "node", "dist/index.js", "/cases", "/evidence", "/reports", "/output"]
     }
   }
 }
