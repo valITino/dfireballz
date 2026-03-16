@@ -85,7 +85,49 @@ wait_for_service() {
   return 1
 }
 
+# ── Ensure output directories exist with correct permissions ──────
+ensure_output_dirs() {
+  local dirs=(
+    /workspace/output/findings
+    /workspace/output/screenshots
+    /workspace/output/logs
+    /workspace/output/exports
+    /workspace/output/timelines
+    /workspace/reports
+    /workspace/results
+    /workspace/cases
+  )
+  for d in "${dirs[@]}"; do
+    if [ ! -d "$d" ]; then
+      mkdir -p "$d" 2>/dev/null || true
+    fi
+  done
+}
+
+verify_bind_mounts() {
+  local has_warning=false
+  for dir in /workspace/output /workspace/reports; do
+    if [ -d "$dir" ]; then
+      # Test writability — the real check that matters
+      local testfile="$dir/.bind-mount-test-$$"
+      if touch "$testfile" 2>/dev/null; then
+        rm -f "$testfile" 2>/dev/null
+      else
+        echo -e "  ${WARN} ${dir} is not writable by uid $(id -u) — output may not be visible on host"
+        has_warning=true
+      fi
+    fi
+  done
+  if [ "$has_warning" = "true" ]; then
+    echo -e "  ${DIM}Hint: ensure host directories exist and are writable before starting.${NC}"
+    echo -e "  ${DIM}Run 'make start' or 'mkdir -p output reports && chmod 777 output reports' on the host.${NC}"
+    echo ""
+  fi
+}
+
 # ── Main ────────────────────────────────────────────────────────────
+
+ensure_output_dirs
 
 print_banner
 
@@ -99,6 +141,8 @@ else
   echo -e "  ${DIM}Credentials persist in the claude-config volume across restarts.${NC}"
 fi
 echo ""
+
+verify_bind_mounts
 
 echo -e "${BOLD}Checking MCP server containers (via docker exec)...${NC}"
 echo -e "${DIM}Waiting up to $((MAX_RETRIES * RETRY_INTERVAL))s per service.${NC}"

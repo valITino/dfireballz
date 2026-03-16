@@ -35,7 +35,16 @@ COPY docker/claude-code-entrypoint.sh /usr/local/bin/claude-code-entrypoint.sh
 RUN chmod +x /usr/local/bin/claude-code-entrypoint.sh
 
 # Non-root user (matches node:22-slim's built-in 'node' user)
+# Pre-create output directory structure so bind-mounts have correct ownership.
 RUN mkdir -p /workspace /home/node/.claude \
+        /workspace/output/findings \
+        /workspace/output/screenshots \
+        /workspace/output/logs \
+        /workspace/output/exports \
+        /workspace/output/timelines \
+        /workspace/reports \
+        /workspace/results \
+        /workspace/cases \
     && chown -R node:node /workspace /home/node/.claude
 
 USER node
