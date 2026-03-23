@@ -145,11 +145,11 @@ Everything runs in Docker. No forensic tools on your host. All findings land in 
 
 | Container | What It Does | Port | Profile |
 |:--|:--|:--:|:--:|
-| **kali-forensics** | Volatility3, bulk_extractor, YARA, dc3dd, Sleuthkit, foremost, exiftool | — | default |
+| **kali-forensics** | Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool | — | default |
 | **winforensics** | MFT, ShellBags, LNK, Registry, EVTX, Prefetch, Chainsaw | — | default |
 | **osint** | Maigret, Sherlock, Holehe, theHarvester, DNSTwist, subfinder | — | default |
 | **threat-intel** | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan | — | default |
-| **binary-analysis** | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, binwalk | — | default |
+| **binary-analysis** | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, lief | — | default |
 | **network-forensics** | 18 Wireshark/tshark tools, tcpdump, PCAP merge/split/carve, JA3/JA3S | — | default |
 | **filesystem** | Scoped file access to /cases, /evidence (read-only), /reports, /output | — | default |
 | **orchestrator** | FastAPI — cases, evidence, playbooks, chain of custody | `8800` | default |
@@ -764,8 +764,8 @@ dfireballz/
 
 | Workflow | Trigger | Actions |
 |:--|:--|:--|
-| **CI** | Push / PR to main | Lint, test, Docker build, Trivy scan |
-| **Docker Build & Push** | Version tag (`v*.*.*`) | Multi-arch build, push to Docker Hub |
+| **CI** | Push / PR to main | Lint, test, pip-audit dependency scan |
+| **Docker Build & Push** | CI pass on main, version tag (`v*`), manual | Build + push all images, Docker Scout CVE scan |
 | **CodeQL** | Push / PR to main + weekly | Static security analysis |
 
 ---
