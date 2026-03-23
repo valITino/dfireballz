@@ -11,7 +11,7 @@ INFRA := db redis orchestrator
         dev test test-unit test-pkg test-smoke test-security lint format typecheck audit \
         shell-kali shell-osint shell-netforensics shell-winforensics shell-binary shell-threat \
         shell-filesystem shell-orchestrator \
-        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code setup-api-key \
+        case-new playbook-list check-gpu configure-mcp start-openwebui claude-code setup-api-key setup-keys \
         mcp-health-check up down ps health nuke push-all report version \
         log-kali log-osint log-netforensics log-winforensics log-binary log-threat \
         log-filesystem log-orchestrator log-db log-redis \
@@ -39,6 +39,7 @@ help:
 	@echo "    make start-openwebui    — Start with Open WebUI + Ollama"
 	@echo "    make claude-code        — Run Claude Code in Docker (interactive)"
 	@echo "    make setup-api-key      — Configure Anthropic API key for Claude Code"
+	@echo "    make setup-keys         — Add/update threat intel API keys (VT, Shodan, etc.)"
 	@echo "    make stop / make down   — Stop all services"
 	@echo "    make restart            — Restart all services"
 	@echo "    make status / make ps   — Show container health status"
@@ -171,6 +172,9 @@ setup-api-key:
 	echo "  API key saved to .env"; \
 	echo "  Run 'make claude-code' to start Claude Code."; \
 	echo ""
+
+setup-keys:
+	@bash scripts/setup-api-keys.sh
 
 claude-code:
 	@mkdir -p cases evidence reports results output/findings output/screenshots output/logs output/exports output/timelines

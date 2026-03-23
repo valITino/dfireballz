@@ -204,7 +204,7 @@ echo ""
 echo -e "${BOLD}[5/7] API Keys (optional — press Enter to skip any)${NC}"
 echo ""
 echo -e "  ${DIM}These threat-intel services offer free tiers. Sign up first if you haven't.${NC}"
-echo -e "  ${DIM}You can add or change keys later in .env — no need to re-run setup.${NC}"
+echo -e "  ${DIM}Add or change keys later with: ${BOLD}make setup-keys${NC}"
 echo ""
 
 _prompt_key() {

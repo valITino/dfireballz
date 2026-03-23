@@ -464,7 +464,15 @@ dfireballz/
 
 ## API Keys
 
-Keys are entered during `make setup` and stored in `.env`. Edit `.env` directly to change them — no re-run needed.
+Keys are entered during `make setup` and stored in `.env`.
+
+**Add or change keys later:**
+
+```bash
+make setup-keys    # Interactive wizard — shows status, saves keys, restarts container, validates
+```
+
+This handles everything: prompts for each key, updates `.env`, restarts the threat-intel container, and validates connectivity.
 
 | Service | Used By | Get Key |
 |:--|:--|:--|
@@ -485,6 +493,7 @@ Keys are entered during `make setup` and stored in `.env`. Edit `.env` directly 
 
 ```bash
 make setup              # Interactive first-run wizard
+make setup-keys         # Add/update threat intel API keys (with validation)
 make start              # Start all services (10 containers)
 make stop               # Stop all services
 make restart            # Restart all services

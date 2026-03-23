@@ -73,6 +73,7 @@ should reflect the context of a professional forensic investigator.
 - `make restart-<service>` — Restart a specific service
 
 ### Utilities
+- `make setup-keys` — Add/update threat intel API keys (interactive, with validation)
 - `make health` — Check MCP server container health
 - `make configure-mcp` — Regenerate `.mcp.json` / `~/.mcphost.yml` for your AI host
 - `make start-openwebui` — Start with Open WebUI + Ollama (`--profile openwebui`)
