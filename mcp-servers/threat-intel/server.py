@@ -16,11 +16,13 @@ mcp = FastMCP(
 
 def _get_key(service: str) -> str:
     """Get API key from environment."""
-    key = os.environ.get(f"{service.upper()}_API_KEY", "")
+    env_var = f"{service.upper()}_API_KEY"
+    key = os.environ.get(env_var, "").strip()
     if not key:
         raise ValueError(
             f"{service} API key not configured. "
-            f"Set {service.upper()}_API_KEY environment variable."
+            f"Set {env_var} in .env (not empty), then run: "
+            f"make restart-threat"
         )
     return key
 

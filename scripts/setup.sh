@@ -125,12 +125,14 @@ REDIS_URL=redis://redis:6379/0
 # ─── MCP Host Selection ─────────────────────────────────────────────
 MCP_HOST=claude-code
 
-# ─── API Keys (fill in your keys) ───────────────────────────────────
-VIRUSTOTAL_API_KEY=
-SHODAN_API_KEY=
-ABUSEIPDB_API_KEY=
-URLSCAN_API_KEY=
-VULNCHECK_API_KEY=
+# ─── API Keys (Threat Intelligence) ─────────────────────────────────
+# Leave commented if you don't have the key. Do NOT set to empty.
+# After adding keys, restart containers: make restart-threat
+# VIRUSTOTAL_API_KEY=
+# SHODAN_API_KEY=
+# ABUSEIPDB_API_KEY=
+# URLSCAN_API_KEY=
+# VULNCHECK_API_KEY=
 
 # ─── Open WebUI + Ollama ────────────────────────────────────────────
 WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
@@ -210,10 +212,11 @@ _prompt_key() {
     echo -e "  ${DIM}${url}${NC}"
     read -rp "  ${service} API Key: " KEY_VALUE
     if [ -n "$KEY_VALUE" ]; then
-        _sed_i "s|${env_var}=|${env_var}=${KEY_VALUE}|" .env
+        # Uncomment the line and set the value
+        _sed_i "s|^# *${env_var}=.*|${env_var}=${KEY_VALUE}|" .env
         echo -e "  ${CHECK} Saved"
     else
-        echo -e "  ${DIM}  Skipped${NC}"
+        echo -e "  ${DIM}  Skipped (add later in .env, then: make restart-threat)${NC}"
     fi
     echo ""
 }
