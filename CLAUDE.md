@@ -73,6 +73,7 @@ should reflect the context of a professional forensic investigator.
 - `make restart-<service>` — Restart a specific service
 
 ### Utilities
+- `make setup-keys` — Add/update threat intel API keys (interactive, with validation)
 - `make health` — Check MCP server container health
 - `make configure-mcp` — Regenerate `.mcp.json` / `~/.mcphost.yml` for your AI host
 - `make start-openwebui` — Start with Open WebUI + Ollama (`--profile openwebui`)
@@ -97,11 +98,11 @@ should reflect the context of a professional forensic investigator.
 **MCP Servers (stdio only — no exposed ports):**
 | Container | Key Tools |
 |-----------|-----------|
-| `kali-forensics` | Volatility3, bulk_extractor, YARA, dc3dd, Sleuthkit, Foremost, ExifTool |
+| `kali-forensics` | Volatility3, bulk_extractor, tshark, YARA, dc3dd, Sleuthkit, Foremost, Binwalk, ExifTool |
 | `winforensics` | MFT, EVTX, Registry, Amcache, SRUM, ShellBags, USN Journal, WinRM remote |
-| `osint` | Maigret, Sherlock, Holehe, SpiderFoot, theHarvester, subfinder, DNSTwist |
+| `osint` | Maigret, Sherlock, Holehe, theHarvester, subfinder, amass, DNSTwist |
 | `threat-intel` | VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan |
-| `binary-analysis` | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, Binwalk |
+| `binary-analysis` | Ghidra headless, Radare2, Capa (MITRE ATT&CK), YARA, pefile, lief |
 | `network-forensics` | tshark (18 tools), tcpdump capture, PCAP carving, JA3/JA3S, GeoIP |
 | `filesystem` | Scoped to /cases, /evidence, /reports, /output — evidence always read-only |
 
