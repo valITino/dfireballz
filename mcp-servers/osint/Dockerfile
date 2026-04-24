@@ -3,6 +3,9 @@ FROM kalilinux/kali-rolling AS base
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install system OSINT tools
+# gcc/pkg-config/libcairo2-dev/python3-dev: pycairo (pulled via
+# maigret → xhtml2pdf → svglib → rlpycairo) has no PyPI wheels and
+# builds from source with meson
 RUN apt-get update && apt-get install -y --no-install-recommends \
     subfinder \
     amass \
@@ -13,6 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
+    python3-dev \
+    gcc \
+    pkg-config \
+    libcairo2-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
 
