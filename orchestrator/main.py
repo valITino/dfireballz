@@ -85,6 +85,32 @@ class PlaybookRun(BaseModel):
     evidence_id: str | None = None
 
 
+class AIInvocationLog(BaseModel):
+    """Audit record for one AI-driven MCP tool call.
+
+    Mirrors ``dfireballz.audit.models.AIInvocation`` — kept duplicated
+    here because the orchestrator container does not install the
+    dfireballz package (different image, smaller footprint).
+    """
+
+    ai_actor: str
+    mcp_server: str
+    tool_name: str
+    case_id: str | None = None
+    evidence_id: str | None = None
+    session_id: str | None = None
+    tool_args: dict[str, Any] = {}
+    input_sha256: str | None = None
+    output_sha256: str | None = None
+    exit_code: int | None = None
+    duration_ms: int | None = None
+    stdout_preview: str | None = None
+    stderr_preview: str | None = None
+    error: str | None = None
+    started_at: str | None = None
+    finished_at: str | None = None
+
+
 # ─── Health ──────────────────────────────────────────────────────────
 
 
@@ -207,6 +233,56 @@ async def list_playbook_runs(case_id: UUID) -> list[dict[str, Any]]:
 async def generate_report(case_id: UUID, format: str = "markdown") -> dict[str, Any]:
     """Generate investigation report."""
     return await app.state.report_generator.generate(str(case_id), format)
+
+
+# ─── AI Audit Log ────────────────────────────────────────────────────
+
+
+@app.post("/audit/ai-invocation", status_code=201)
+async def log_ai_invocation(event: AIInvocationLog) -> dict[str, Any]:
+    """Persist one AI tool-invocation audit record.
+
+    Called by MCP server wrappers and the docker backend after each
+    tool execution. Writes are immutable. When ``evidence_id`` is set
+    a parallel chain-of-custody entry is created automatically.
+    """
+    from datetime import datetime
+
+    payload = event.model_dump()
+    # Convert ISO 8601 strings to datetime for asyncpg.
+    for key in ("started_at", "finished_at"):
+        val = payload.get(key)
+        if isinstance(val, str) and val:
+            try:
+                payload[key] = datetime.fromisoformat(val.replace("Z", "+00:00"))
+            except ValueError:
+                payload[key] = None
+    row = await app.state.case_manager.log_ai_invocation(payload)
+    return {"id": str(row["id"]), "status": "logged"}
+
+
+@app.get("/audit/ai-invocations")
+async def list_ai_invocations(
+    case_id: UUID | None = None,
+    session_id: str | None = None,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    """List AI invocation audit records.
+
+    Useful for forensic reviewers reconstructing what the AI did. At
+    least one filter (``case_id`` or ``session_id``) is required to
+    avoid accidentally dumping the full table.
+    """
+    if case_id is None and session_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide case_id or session_id to filter AI invocations.",
+        )
+    return await app.state.case_manager.list_ai_invocations(
+        case_id=str(case_id) if case_id else None,
+        session_id=session_id,
+        limit=min(max(limit, 1), 1000),
+    )
 
 
 # ─── Settings ────────────────────────────────────────────────────────

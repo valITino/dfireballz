@@ -1,6 +1,7 @@
 """Case Manager — Creates/loads cases, manages CoC log, evidence hash registry."""
 
 import hashlib
+import json
 import os
 import uuid
 from datetime import UTC, datetime
@@ -317,3 +318,110 @@ class CaseManager:
                 data.get("mcp_tool_call"),
             )
             return dict(row)
+
+    # ─── AI Tool Invocations ─────────────────────────────────────────
+
+    async def log_ai_invocation(self, data: dict) -> dict:
+        """Persist an AI tool-invocation audit record.
+
+        Inserts into ``ai_tool_invocations`` (immutable). When the call
+        targets evidence (``evidence_id`` set), ALSO writes a CoC entry
+        so the legal-grade chain stays intact — per the project
+        invariant that every evidence access creates a CoC log row.
+        """
+        case_uuid = uuid.UUID(data["case_id"]) if data.get("case_id") else None
+        evidence_uuid = (
+            uuid.UUID(data["evidence_id"]) if data.get("evidence_id") else None
+        )
+
+        # Tool args may arrive as a dict (preferred) or a JSON string
+        # from a serialized payload. Normalise to a JSON string for
+        # asyncpg's JSONB binding.
+        tool_args = data.get("tool_args")
+        if isinstance(tool_args, dict):
+            tool_args_json: str | None = json.dumps(tool_args, default=str)
+        elif isinstance(tool_args, str):
+            tool_args_json = tool_args
+        else:
+            tool_args_json = None
+
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(
+                """INSERT INTO ai_tool_invocations
+                   (case_id, evidence_id, session_id, ai_actor,
+                    mcp_server, tool_name, tool_args,
+                    input_sha256, output_sha256, exit_code,
+                    duration_ms, stdout_preview, stderr_preview,
+                    error, started_at, finished_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9,
+                           $10, $11, $12, $13, $14, $15, $16)
+                   RETURNING *""",
+                case_uuid,
+                evidence_uuid,
+                data.get("session_id"),
+                data["ai_actor"],
+                data["mcp_server"],
+                data["tool_name"],
+                tool_args_json,
+                data.get("input_sha256"),
+                data.get("output_sha256"),
+                data.get("exit_code"),
+                data.get("duration_ms"),
+                data.get("stdout_preview"),
+                data.get("stderr_preview"),
+                data.get("error"),
+                data.get("started_at"),
+                data.get("finished_at"),
+            )
+
+            # If this AI call touched evidence, mirror to CoC so the
+            # legal chain reflects it. The CoC entry references the
+            # same input/output hashes so the two logs cross-validate.
+            if evidence_uuid is not None:
+                await conn.execute(
+                    """INSERT INTO chain_of_custody_log
+                       (evidence_id, case_id, action, actor,
+                        tool_used, input_hash, output_hash,
+                        notes, mcp_tool_call)
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)""",
+                    evidence_uuid,
+                    case_uuid,
+                    "analyzed",
+                    data["ai_actor"],
+                    f"{data['mcp_server']}.{data['tool_name']}",
+                    data.get("input_sha256"),
+                    data.get("output_sha256"),
+                    f"AI invocation {row['id']}",
+                    tool_args_json,
+                )
+
+            return dict(row)
+
+    async def list_ai_invocations(
+        self,
+        case_id: str | None = None,
+        session_id: str | None = None,
+        limit: int = 200,
+    ) -> list[dict]:
+        """List AI tool-invocation records, newest first.
+
+        Caller must supply at least one filter (enforced by the API
+        layer); both filters can be combined.
+        """
+        async with self.pool.acquire() as conn:
+            clauses: list[str] = []
+            params: list[Any] = []
+            if case_id:
+                clauses.append(f"case_id = ${len(params) + 1}")
+                params.append(uuid.UUID(case_id))
+            if session_id:
+                clauses.append(f"session_id = ${len(params) + 1}")
+                params.append(session_id)
+            where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+            params.append(limit)
+            query = (
+                f"SELECT * FROM ai_tool_invocations{where} "  # nosec B608
+                f"ORDER BY started_at DESC LIMIT ${len(params)}"
+            )
+            rows = await conn.fetch(query, *params)
+            return [dict(r) for r in rows]

@@ -4,13 +4,21 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import zipfile
 from pathlib import Path
 
 from fastmcp import FastMCP
 
+# Make the volume-mounted shared audit decorator importable.
+# /app/_common is mounted from ./mcp-servers/_common in docker-compose.
+sys.path.insert(0, "/app")
+from _common.audit import audited  # noqa: E402
+
+_SERVER = "kali-forensics"
+
 mcp = FastMCP(
-    "kali-forensics",
+    _SERVER,
     instructions=(
         "Kali Linux forensics: Volatility3, bulk_extractor, tshark, "
         "YARA, dc3dd, Sleuthkit, foremost, binwalk, exiftool"
@@ -59,6 +67,7 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def volatility_run(image_path: str, plugin: str, args: str | None = None) -> dict:
     """Run a Volatility3 plugin against a memory image.
 
@@ -75,6 +84,7 @@ def volatility_run(image_path: str, plugin: str, args: str | None = None) -> dic
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def tshark_analyze(pcap_path: str, filter: str | None = None, output_format: str = "json") -> dict:
     """Analyze PCAP file with tshark display filters.
 
@@ -99,6 +109,7 @@ def tshark_analyze(pcap_path: str, filter: str | None = None, output_format: str
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def bulk_extract(image_path: str, output_dir: str) -> dict:
     """Extract artifacts from a disk/memory image using bulk_extractor.
 
@@ -112,6 +123,7 @@ def bulk_extract(image_path: str, output_dir: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def foremost_recover(image_path: str, types: str | None = None) -> dict:
     """Recover/carve files from a disk image using foremost.
 
@@ -127,6 +139,7 @@ def foremost_recover(image_path: str, types: str | None = None) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def binwalk_scan(file_path: str, extract: bool = False) -> dict:
     """Scan a file for embedded files/firmware signatures using binwalk.
 
@@ -142,6 +155,7 @@ def binwalk_scan(file_path: str, extract: bool = False) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def exiftool_read(file_path: str) -> dict:
     """Extract metadata from a file using exiftool.
 
@@ -159,6 +173,7 @@ def exiftool_read(file_path: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def yara_scan(target_path: str, rules_path: str) -> dict:
     """Scan a file or directory with YARA rules.
 
@@ -172,6 +187,7 @@ def yara_scan(target_path: str, rules_path: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def dc3dd_hash(file_path: str, algorithm: str = "sha256") -> dict:
     """Compute forensic hash of a file for chain of custody verification.
 
@@ -199,6 +215,7 @@ def dc3dd_hash(file_path: str, algorithm: str = "sha256") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def sleuthkit_analyze(image_path: str, command: str, args: str | None = None) -> dict:
     """Run Sleuthkit (TSK) commands for disk forensics.
 
@@ -218,6 +235,7 @@ def sleuthkit_analyze(image_path: str, command: str, args: str | None = None) ->
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def extract_archive(archive_path: str, output_dir: str) -> dict:
     """Extract a ZIP archive to a writable directory.
 

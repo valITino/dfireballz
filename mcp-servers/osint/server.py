@@ -2,11 +2,17 @@
 
 import json
 import subprocess
+import sys
 
 from fastmcp import FastMCP
 
+sys.path.insert(0, "/app")
+from _common.audit import audited  # noqa: E402
+
+_SERVER = "osint"
+
 mcp = FastMCP(
-    "osint",
+    _SERVER,
     instructions=(
         "OSINT: Maigret, Sherlock, Holehe, SpiderFoot, "
         "theHarvester, DNSTwist, h8mail, subfinder"
@@ -34,6 +40,7 @@ def _run(args: list[str], timeout: int = 300) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def username_search(
     username: str,
     output_format: str = "text",
@@ -60,6 +67,7 @@ def username_search(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def email_check(email: str) -> dict:
     """Check email registration across platforms (Holehe) and breach databases (h8mail).
 
@@ -84,6 +92,7 @@ _DEFAULT_HARVESTER_SOURCES = (
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def harvester_scan(
     domain: str,
     sources: str = _DEFAULT_HARVESTER_SOURCES,
@@ -101,6 +110,7 @@ def harvester_scan(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def subdomain_enum(domain: str) -> dict:
     """Enumerate subdomains using subfinder and amass.
 
@@ -125,6 +135,7 @@ def subdomain_enum(domain: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def dns_twist(domain: str) -> dict:
     """Detect typosquatting and phishing domains using dnstwist.
 
@@ -141,6 +152,7 @@ def dns_twist(domain: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def whois_lookup(target: str) -> dict:
     """Perform WHOIS lookup on a domain or IP.
 
@@ -151,6 +163,7 @@ def whois_lookup(target: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def web_fingerprint(url: str) -> dict:
     """Fingerprint web technologies using whatweb.
 
@@ -161,6 +174,7 @@ def web_fingerprint(url: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def passive_dns(ip_or_domain: str) -> dict:
     """Query passive DNS records for an IP or domain.
 

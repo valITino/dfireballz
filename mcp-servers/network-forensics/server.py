@@ -2,12 +2,18 @@
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 from fastmcp import FastMCP
 
+sys.path.insert(0, "/app")
+from _common.audit import audited  # noqa: E402
+
+_SERVER = "network-forensics"
+
 mcp = FastMCP(
-    "network-forensics",
+    _SERVER,
     instructions=(
         "Network: 18-tool Wireshark/tshark suite, tcpdump capture, "
         "PCAP split/merge/carve, threat detection"
@@ -52,6 +58,7 @@ def _validate_path(path: str, allowed_dirs: list[Path] | None = None) -> Path:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_system_info(info_type: str = "interfaces") -> dict:
     """Get Wireshark/tshark system information.
 
@@ -69,6 +76,7 @@ def wireshark_system_info(info_type: str = "interfaces") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_live_capture(
     interface: str = "any",
     duration: int = 30,
@@ -91,6 +99,7 @@ def wireshark_live_capture(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_analyze_pcap(filepath: str, analysis_type: str = "summary") -> dict:
     """Comprehensive PCAP analysis.
 
@@ -130,6 +139,7 @@ def wireshark_analyze_pcap(filepath: str, analysis_type: str = "summary") -> dic
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_get_protocol_stats(filepath: str) -> dict:
     """Get protocol hierarchy statistics from a PCAP.
 
@@ -141,6 +151,7 @@ def wireshark_get_protocol_stats(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_get_conversations(filepath: str, transport: str = "tcp") -> dict:
     """Get conversation flows from a PCAP.
 
@@ -156,6 +167,7 @@ def wireshark_get_conversations(filepath: str, transport: str = "tcp") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_follow_stream(
     filepath: str,
     stream_type: str = "tcp",
@@ -177,6 +189,7 @@ def wireshark_follow_stream(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_apply_filter(
     filepath: str,
     display_filter: str,
@@ -198,6 +211,7 @@ def wireshark_apply_filter(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_export_objects(
     filepath: str,
     protocol: str = "http",
@@ -221,6 +235,7 @@ def wireshark_export_objects(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_split_pcap(
     filepath: str,
     split_by: str = "packets",
@@ -253,6 +268,7 @@ def wireshark_split_pcap(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_merge_pcaps(input_files: list[str], output_file: str) -> dict:
     """Merge multiple PCAP files chronologically.
 
@@ -267,6 +283,7 @@ def wireshark_merge_pcaps(input_files: list[str], output_file: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_security_audit(filepath: str) -> dict:
     """Automated security threat detection in PCAP.
 
@@ -312,6 +329,7 @@ def wireshark_security_audit(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_generate_filter(description: str) -> dict:
     """Generate a Wireshark display filter from a natural language description.
 
@@ -394,6 +412,7 @@ def wireshark_generate_filter(description: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_geo_resolve(filepath: str) -> dict:
     """Resolve GeoIP information for external IPs in a PCAP.
 
@@ -408,6 +427,7 @@ def wireshark_geo_resolve(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_extract_dns(filepath: str) -> dict:
     """Extract all DNS queries and responses from a PCAP.
 
@@ -428,6 +448,7 @@ def wireshark_extract_dns(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_extract_http(filepath: str) -> dict:
     """Extract HTTP requests, hosts, URIs, and user agents from a PCAP.
 
@@ -449,6 +470,7 @@ def wireshark_extract_http(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def wireshark_extract_tls(filepath: str) -> dict:
     """Extract TLS handshake info, JA3 fingerprints, and certificate metadata.
 
@@ -482,6 +504,7 @@ def wireshark_extract_tls(filepath: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def tcpdump_capture(
     interface: str = "any",
     filter: str | None = None,
@@ -506,6 +529,7 @@ def tcpdump_capture(
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def pcap_time_slice(filepath: str, start_time: str, end_time: str, output_file: str) -> dict:
     """Extract a time window from a large PCAP file.
 

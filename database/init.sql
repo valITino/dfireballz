@@ -86,6 +86,62 @@ CREATE TRIGGER coc_no_delete
     FOR EACH ROW
     EXECUTE FUNCTION prevent_coc_modification();
 
+-- ─── AI Tool Invocations (audit log for AI-driven tool execution) ──
+-- Records every MCP tool call made by an AI host (Claude Code, ChatGPT
+-- via mcpo, MCPHost+Ollama, …) so reviewers can verify, after the fact,
+-- exactly what the AI did, when, with what inputs, and what came back.
+-- Like chain_of_custody_log, rows are immutable once written.
+
+CREATE TABLE ai_tool_invocations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    case_id UUID REFERENCES cases(id),
+    evidence_id UUID REFERENCES evidence(id),
+    session_id VARCHAR(100),
+    ai_actor VARCHAR(100) NOT NULL,
+    mcp_server VARCHAR(100) NOT NULL,
+    tool_name VARCHAR(200) NOT NULL,
+    tool_args JSONB,
+    input_sha256 VARCHAR(64),
+    output_sha256 VARCHAR(64),
+    exit_code INTEGER,
+    duration_ms INTEGER,
+    stdout_preview TEXT,
+    stderr_preview TEXT,
+    error TEXT,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    finished_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_ai_inv_case_id ON ai_tool_invocations(case_id);
+CREATE INDEX idx_ai_inv_session_id ON ai_tool_invocations(session_id);
+CREATE INDEX idx_ai_inv_started_at ON ai_tool_invocations(started_at DESC);
+CREATE INDEX idx_ai_inv_tool_name ON ai_tool_invocations(tool_name);
+CREATE INDEX idx_ai_inv_actor ON ai_tool_invocations(ai_actor);
+
+-- Immutability: once an AI tool invocation is logged it cannot be
+-- modified or deleted. Uses a dedicated function so the error message
+-- correctly identifies the audit log (the CoC function's message would
+-- be misleading for this table).
+CREATE OR REPLACE FUNCTION prevent_audit_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION
+        'AI invocation log entries are immutable. UPDATE/DELETE on % is prohibited.',
+        TG_TABLE_NAME;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER ai_inv_no_update
+    BEFORE UPDATE ON ai_tool_invocations
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_audit_modification();
+
+CREATE TRIGGER ai_inv_no_delete
+    BEFORE DELETE ON ai_tool_invocations
+    FOR EACH ROW
+    EXECUTE FUNCTION prevent_audit_modification();
+
 -- ─── IOCs ───────────────────────────────────────────────────────────
 
 CREATE TABLE iocs (
