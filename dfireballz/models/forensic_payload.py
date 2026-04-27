@@ -214,6 +214,26 @@ class CoCEntry(BaseModel):
     hash_after: str = ""
 
 
+class AIInvocationEntry(BaseModel):
+    """A single AI-driven MCP tool invocation captured for review.
+
+    Mirrors a row of ``ai_tool_invocations`` so a payload can carry the
+    audit trail end-to-end: from MCP tool execution through report
+    generation. All fields default so older payloads still validate.
+    """
+
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    ai_actor: str = ""
+    mcp_server: str = ""
+    tool_name: str = ""
+    tool_args: dict[str, Any] = Field(default_factory=dict)
+    input_sha256: str = ""
+    output_sha256: str = ""
+    exit_code: int = 0
+    duration_ms: int = 0
+    error: str = ""
+
+
 # ---------------------------------------------------------------------------
 # Error log
 # ---------------------------------------------------------------------------
@@ -336,6 +356,7 @@ class ForensicPayload(BaseModel):
     investigation_timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     findings: ForensicFindings = Field(default_factory=ForensicFindings)
     chain_of_custody: list[CoCEntry] = Field(default_factory=list)
+    ai_invocations: list[AIInvocationEntry] = Field(default_factory=list)
     error_log: list[ErrorLogEntry] = Field(default_factory=list)
     executive_summary: ExecutiveSummary = Field(default_factory=ExecutiveSummary)
     recommendations: list[RecommendationEntry] = Field(default_factory=list)

@@ -13,8 +13,12 @@ services:
       start_interval: 3s
     environment:
       PYTHONUNBUFFERED: "1"
+      DFIR_AI_ACTOR: ${DFIR_AI_ACTOR:-unknown-ai}
+      DFIR_ORCHESTRATOR_URL: ${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}
+      DFIR_AUDIT_DISABLED: ${DFIR_AUDIT_DISABLED:-}
     volumes:
       - ./mcp-servers/kali-forensics/server.py:/app/server.py:ro
+      - ./mcp-servers/_common:/app/_common:ro
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
@@ -56,8 +60,12 @@ services:
       PYTHONUNBUFFERED: "1"
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY:-}
       SHODAN_API_KEY: ${SHODAN_API_KEY:-}
+      DFIR_AI_ACTOR: ${DFIR_AI_ACTOR:-unknown-ai}
+      DFIR_ORCHESTRATOR_URL: ${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}
+      DFIR_AUDIT_DISABLED: ${DFIR_AUDIT_DISABLED:-}
     volumes:
       - ./mcp-servers/osint/server.py:/app/server.py:ro
+      - ./mcp-servers/_common:/app/_common:ro
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
@@ -83,8 +91,12 @@ services:
       ABUSEIPDB_API_KEY: ${ABUSEIPDB_API_KEY:-}
       URLSCAN_API_KEY: ${URLSCAN_API_KEY:-}
       VULNCHECK_API_KEY: ${VULNCHECK_API_KEY:-}
+      DFIR_AI_ACTOR: ${DFIR_AI_ACTOR:-unknown-ai}
+      DFIR_ORCHESTRATOR_URL: ${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}
+      DFIR_AUDIT_DISABLED: ${DFIR_AUDIT_DISABLED:-}
     volumes:
       - ./mcp-servers/threat-intel/server.py:/app/server.py:ro
+      - ./mcp-servers/_common:/app/_common:ro
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
@@ -105,8 +117,12 @@ services:
       start_interval: 3s
     environment:
       PYTHONUNBUFFERED: "1"
+      DFIR_AI_ACTOR: ${DFIR_AI_ACTOR:-unknown-ai}
+      DFIR_ORCHESTRATOR_URL: ${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}
+      DFIR_AUDIT_DISABLED: ${DFIR_AUDIT_DISABLED:-}
     volumes:
       - ./mcp-servers/binary-analysis/server.py:/app/server.py:ro
+      - ./mcp-servers/_common:/app/_common:ro
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
@@ -126,8 +142,12 @@ services:
       start_interval: 3s
     environment:
       PYTHONUNBUFFERED: "1"
+      DFIR_AI_ACTOR: ${DFIR_AI_ACTOR:-unknown-ai}
+      DFIR_ORCHESTRATOR_URL: ${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}
+      DFIR_AUDIT_DISABLED: ${DFIR_AUDIT_DISABLED:-}
     volumes:
       - ./mcp-servers/network-forensics/server.py:/app/server.py:ro
+      - ./mcp-servers/_common:/app/_common:ro
       - ./cases:/cases
       - ./evidence:/evidence:ro
       - ./reports:/reports
@@ -246,6 +266,10 @@ services:
       ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY-}"
       CLAUDE_CODE_OAUTH_TOKEN: "${CLAUDE_CODE_OAUTH_TOKEN-}"
       DFIREBALLZ_CONTAINER: "1"
+      # Identifies this AI host in the audit log (ai_tool_invocations.ai_actor).
+      # Other hosts (mcphost, mcpo) override this in their own service.
+      DFIR_AI_ACTOR: "${DFIR_AI_ACTOR:-claude-code}"
+      DFIR_ORCHESTRATOR_URL: "${DFIR_ORCHESTRATOR_URL:-http://orchestrator:8800}"
       no_proxy: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
       NO_PROXY: "kali-forensics,winforensics,osint,threat-intel,binary-analysis,network-forensics,filesystem,db,redis,orchestrator,ollama,mcpo,open-webui,localhost,127.0.0.1"
     dns:

@@ -4,12 +4,18 @@ VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan.
 """
 
 import os
+import sys
 
 import requests
 from fastmcp import FastMCP
 
+sys.path.insert(0, "/app")
+from _common.audit import audited  # noqa: E402
+
+_SERVER = "threat-intel"
+
 mcp = FastMCP(
-    "threat-intel",
+    _SERVER,
     instructions="Threat intel: VirusTotal, Shodan, AbuseIPDB, MalwareBazaar, ThreatFox, URLScan",
 )
 
@@ -228,6 +234,7 @@ def _enrich_ioc(ioc: str, ioc_type: str = "auto") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def vt_lookup(indicator: str, ioc_type: str = "file_hash") -> dict:
     """Look up an indicator on VirusTotal.
 
@@ -239,6 +246,7 @@ def vt_lookup(indicator: str, ioc_type: str = "file_hash") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def shodan_host(ip: str) -> dict:
     """Get Shodan host information for an IP address.
 
@@ -249,6 +257,7 @@ def shodan_host(ip: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def shodan_search(query: str, page: int = 1) -> dict:
     """Search Shodan with a query string.
 
@@ -260,6 +269,7 @@ def shodan_search(query: str, page: int = 1) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def abuse_ip_check(ip: str) -> dict:
     """Check IP reputation on AbuseIPDB.
 
@@ -270,6 +280,7 @@ def abuse_ip_check(ip: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def malware_bazaar_lookup(hash_or_tag: str) -> dict:
     """Search MalwareBazaar for a sample by hash or tag.
 
@@ -280,6 +291,7 @@ def malware_bazaar_lookup(hash_or_tag: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def threatfox_lookup(ioc: str) -> dict:
     """Search ThreatFox IOC database.
 
@@ -290,6 +302,7 @@ def threatfox_lookup(ioc: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def urlscan_lookup(url: str) -> dict:
     """Submit a URL to URLScan.io for analysis.
 
@@ -300,6 +313,7 @@ def urlscan_lookup(url: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def cve_lookup(cve_id: str) -> dict:
     """Look up CVE details from NVD.
 
@@ -310,6 +324,7 @@ def cve_lookup(cve_id: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def enrich_ioc(ioc: str, ioc_type: str = "auto") -> dict:
     """Enrich an IOC by querying all relevant threat intelligence sources.
 

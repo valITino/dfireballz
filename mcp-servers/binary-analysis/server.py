@@ -5,14 +5,20 @@ import json
 import math
 import shutil
 import subprocess
+import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
 
 from fastmcp import FastMCP
 
+sys.path.insert(0, "/app")
+from _common.audit import audited  # noqa: E402
+
+_SERVER = "binary-analysis"
+
 mcp = FastMCP(
-    "binary-analysis",
+    _SERVER,
     instructions="Binary/malware: Ghidra headless, Radare2, Capa, YARA, pefile, entropy analysis",
 )
 
@@ -52,6 +58,7 @@ def _validate_path(path: str) -> Path:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def static_analyze(file_path: str) -> dict:
     """Perform static analysis: file type, hashes, PE/ELF headers, packed detection.
 
@@ -127,6 +134,7 @@ def static_analyze(file_path: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def strings_extract(file_path: str, min_length: int = 4, encoding: str = "both") -> dict:
     """Extract strings from a binary file.
 
@@ -158,6 +166,7 @@ def strings_extract(file_path: str, min_length: int = 4, encoding: str = "both")
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def ghidra_decompile(binary_path: str, function_name_or_offset: str | None = None) -> dict:
     """Decompile a binary using Ghidra headless analyzer.
 
@@ -190,6 +199,7 @@ def ghidra_decompile(binary_path: str, function_name_or_offset: str | None = Non
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def radare2_analyze(binary_path: str, command: str = "aaa;afl") -> dict:
     """Analyze a binary with Radare2.
 
@@ -214,6 +224,7 @@ def radare2_analyze(binary_path: str, command: str = "aaa;afl") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def capa_detect(binary_path: str) -> dict:
     """Detect malware capabilities mapped to MITRE ATT&CK using Capa.
 
@@ -231,6 +242,7 @@ def capa_detect(binary_path: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def yara_match(binary_path: str, rule_set: str = "community") -> dict:
     """Match a binary against YARA rules.
 
@@ -270,6 +282,7 @@ def yara_match(binary_path: str, rule_set: str = "community") -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def entropy_analysis(file_path: str) -> dict:
     """Analyze file entropy to detect packed/encrypted sections.
 
@@ -315,6 +328,7 @@ def entropy_analysis(file_path: str) -> dict:
 
 
 @mcp.tool()
+@audited(server=_SERVER)
 def import_export_table(binary_path: str) -> dict:
     """Parse import and export tables of a PE/ELF binary.
 

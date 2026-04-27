@@ -6,8 +6,11 @@ import asyncio
 import logging
 import os
 import shutil
+from datetime import UTC, datetime
 from typing import Any
 
+from dfireballz.audit import get_emitter
+from dfireballz.audit.emitter import build_invocation
 from dfireballz.backends.base import ToolBackend, ToolResult
 
 logger = logging.getLogger("dfireballz.backends.docker")
@@ -126,6 +129,12 @@ class DockerBackend(ToolBackend):
         cmd = ["docker", "exec", container, *args]
         logger.info("Docker exec: %s", " ".join(cmd))
 
+        started_at = datetime.now(UTC)
+        stdout_text = ""
+        stderr_text = ""
+        returncode: int | None = None
+        run_error: str | None = None
+
         try:
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -136,31 +145,40 @@ class DockerBackend(ToolBackend):
                 proc.communicate(),
                 timeout=params.get("timeout", _DEFAULT_TIMEOUT),
             )
+            stdout_text = stdout.decode("utf-8", errors="replace")
+            stderr_text = stderr.decode("utf-8", errors="replace")
+            returncode = proc.returncode
         except TimeoutError:
-            return ToolResult(
-                success=False,
-                tool=f"{category}/{tool}",
-                category=category,
-                output="",
-                errors=[f"Timeout after {_DEFAULT_TIMEOUT}s"],
-            )
+            run_error = f"Timeout after {_DEFAULT_TIMEOUT}s"
         except OSError as exc:
-            return ToolResult(
-                success=False,
-                tool=f"{category}/{tool}",
-                category=category,
-                output="",
-                errors=[str(exc)],
+            run_error = str(exc)
+        finally:
+            await self._emit_audit(
+                tool=tool,
+                container=container,
+                params=params,
+                started_at=started_at,
+                stdout=stdout_text,
+                stderr=stderr_text,
+                returncode=returncode,
+                error=run_error,
             )
 
-        stdout_text = stdout.decode("utf-8", errors="replace")
-        stderr_text = stderr.decode("utf-8", errors="replace")
+        if run_error is not None:
+            return ToolResult(
+                success=False,
+                tool=f"{category}/{tool}",
+                category=category,
+                output="",
+                errors=[run_error],
+            )
+
         errors: list[str] = []
         if stderr_text.strip():
             errors.append(stderr_text.strip())
 
         return ToolResult(
-            success=proc.returncode == 0,
+            success=returncode == 0,
             tool=f"{category}/{tool}",
             category=category,
             output=stdout_text,
@@ -168,10 +186,46 @@ class DockerBackend(ToolBackend):
             raw_data={
                 "stdout": stdout_text,
                 "stderr": stderr_text,
-                "returncode": proc.returncode,
+                "returncode": returncode,
                 "command": " ".join(cmd),
             },
         )
+
+    @staticmethod
+    async def _emit_audit(
+        *,
+        tool: str,
+        container: str,
+        params: dict[str, Any],
+        started_at: datetime,
+        stdout: str,
+        stderr: str,
+        returncode: int | None,
+        error: str | None,
+    ) -> None:
+        """Persist one AI-driven tool execution to the audit log.
+
+        Failure here must not block the caller — the surrounding
+        ``finally`` already swallowed the original exception path.
+        """
+        try:
+            invocation = build_invocation(
+                ai_actor=os.environ.get("DFIR_AI_ACTOR", "unknown-ai") or "unknown-ai",
+                mcp_server=container,
+                tool_name=tool,
+                tool_args=params,
+                started_at=started_at,
+                finished_at=datetime.now(UTC),
+                exit_code=returncode,
+                stdout=stdout or None,
+                stderr=stderr or None,
+                error=error,
+                case_id=os.environ.get("DFIR_CASE_ID") or None,
+                session_id=os.environ.get("DFIR_SESSION_ID") or None,
+            )
+            await get_emitter().emit(invocation)
+        except Exception:  # pragma: no cover — final safety net
+            logger.exception("Audit emit failed for %s/%s", container, tool)
 
     async def list_tools(self) -> list[dict[str, str]]:
         available: list[dict[str, str]] = []

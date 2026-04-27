@@ -417,26 +417,54 @@ async def _do_get_payload_schema() -> str:
 
 
 async def _do_log_chain_of_custody(args: dict[str, Any]) -> str:
+    import os
     from datetime import UTC, datetime
 
+    import httpx
+
+    actor = os.environ.get("DFIR_AI_ACTOR", "mcp_host") or "mcp_host"
     entry = {
         "timestamp": datetime.now(UTC).isoformat(),
         "action": args["action"],
         "evidence_id": args["evidence_id"],
         "description": args["description"],
         "tool_used": args.get("tool_used", ""),
-        "actor": "mcp_host",
+        "actor": actor,
     }
 
-    # Append to CoC log file
+    # 1. Always append to local JSONL — survives DB outage and mirrors
+    #    pre-existing behaviour that downstream tests rely on.
     from dfireballz.config import settings
 
     coc_dir = settings.cases_dir
     coc_dir.mkdir(parents=True, exist_ok=True)
     coc_file = coc_dir / "chain_of_custody.jsonl"
-
     with open(coc_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry, default=str) + "\n")
+
+    # 2. Best-effort: also POST to the orchestrator so the entry lands
+    #    in the immutable chain_of_custody_log table. Failure here is
+    #    non-fatal — the JSONL line above is the safety net.
+    orch_url = os.environ.get(
+        "DFIR_ORCHESTRATOR_URL", "http://orchestrator:8800"
+    ).rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.post(
+                f"{orch_url}/audit/ai-invocation",
+                json={
+                    "ai_actor": actor,
+                    "mcp_server": "dfireballz-mcp",
+                    "tool_name": "log_chain_of_custody",
+                    "tool_args": dict(args),
+                    "started_at": entry["timestamp"],
+                    "finished_at": entry["timestamp"],
+                },
+            )
+            entry["orchestrator_status"] = resp.status_code
+    except (httpx.HTTPError, OSError) as exc:
+        logger.debug("CoC orchestrator POST failed: %s", exc)
+        entry["orchestrator_status"] = "unreachable"
 
     logger.info("Chain of custody logged: %s on %s", args["action"], args["evidence_id"])
     return json.dumps({"status": "logged", "entry": entry})
