@@ -10,11 +10,30 @@ from pathlib import Path
 from typing import Any
 
 import asyncpg
-from case_lifecycle import write_closure_manifest, write_precondition
+from case_lifecycle import (
+    write_closure_manifest,
+    write_evidence_record,
+    write_precondition,
+)
 from fastapi import UploadFile
 
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
+
+# Default audit-log path inside the orchestrator container; mirrors
+# dfireballz.audit.emitter._default_jsonl_path in the AI containers.
+_AUDIT_LOG_CANDIDATES = (
+    Path("/workspace/output/logs/ai_invocations.jsonl"),
+    Path("/output/logs/ai_invocations.jsonl"),
+)
+
+
+def _resolve_audit_log_path() -> Path | None:
+    """Return the path to the audit log JSONL if it exists, else None."""
+    for candidate in _AUDIT_LOG_CANDIDATES:
+        if candidate.is_file():
+            return candidate
+    return None
 
 _DEFAULT_DECLARED_MCP_SERVERS = (
     "kali-forensics",
@@ -186,11 +205,13 @@ class CaseManager:
             )
             if transitioning_to_closed:
                 case_dir = CASES_DIR / updated["case_number"]
+                audit_log_path = _resolve_audit_log_path()
                 try:
                     write_closure_manifest(
                         case_dir,
                         updated,
                         closing_examiner=updated.get("investigator"),
+                        audit_log_path=audit_log_path,
                     )
                 except OSError as exc:
                     logger.warning(
@@ -224,7 +245,19 @@ class CaseManager:
     # ─── Evidence ────────────────────────────────────────────────────
 
     async def add_evidence(self, case_id: str, file: UploadFile) -> dict:
-        """Upload evidence, compute hashes, create CoC entry."""
+        """Upload evidence, compute hashes, write phase-aware artifacts.
+
+        Per the canonical six-phase model, an upload spans two phases:
+
+        * **Identification** — an evidence record JSON is written under
+          ``cases/<case-number>/02-identification/evidence-records/<evidence-id>.json``.
+        * **Acquisition** — the original is stored read-only in
+          ``/evidence/<case-number>/`` and a working copy is placed
+          under ``cases/<case-number>/03-acquisition/<evidence-id>/``.
+
+        Two CoC entries are appended: ``identified`` and ``acquired``,
+        both phase-tagged in their notes.
+        """
         case = await self.get_case(case_id)
         if not case:
             raise ValueError(f"Case {case_id} not found")
@@ -235,7 +268,7 @@ class CaseManager:
         md5 = hashlib.md5(content, usedforsecurity=False).hexdigest()
         sha1 = hashlib.sha1(content, usedforsecurity=False).hexdigest()
 
-        # Save to evidence directory (sanitize filename to prevent path traversal)
+        # Save the canonical, read-only original under /evidence/.
         evidence_dir = EVIDENCE_DIR / case["case_number"]
         evidence_dir.mkdir(parents=True, exist_ok=True)
         safe_name = Path(file.filename).name  # Strip any directory components
@@ -248,7 +281,8 @@ class CaseManager:
             f.write(content)
 
         async with self.pool.acquire() as conn:
-            # Create evidence record
+            # Create evidence row first — we need the generated id for
+            # phase artifacts.
             row = await conn.fetchrow(
                 """INSERT INTO evidence
                    (case_id, filename, filepath, file_type,
@@ -265,8 +299,79 @@ class CaseManager:
                 len(content),
                 "upload",
             )
+            evidence_id = str(row["id"])
 
-            # Create CoC entry
+            # Phase-aware artifacts — failures here are logged but do
+            # not roll back the DB row (DB authoritative; on-disk
+            # recoverable). The original at /evidence/ is the legal
+            # canonical copy regardless of these helpers' outcome.
+            case_dir = CASES_DIR / case["case_number"]
+
+            # 02-identification: structured evidence record.
+            try:
+                write_evidence_record(
+                    case_dir,
+                    {
+                        "id": evidence_id,
+                        "case_id": case_id,
+                        "case_number": case["case_number"],
+                        "filename": safe_name,
+                        "file_type": file.content_type,
+                        "sha256": sha256,
+                        "md5": md5,
+                        "sha1": sha1,
+                        "size_bytes": len(content),
+                        "acquisition_method": "upload",
+                        "original_path": str(filepath),
+                    },
+                )
+            except (OSError, ValueError) as exc:
+                logger.warning(
+                    "Failed to write evidence-record JSON for %s: %s",
+                    evidence_id,
+                    exc,
+                )
+
+            # 03-acquisition: working copy under the case directory.
+            working_copy_path: Path | None = None
+            try:
+                acquisition_dir = case_dir / "03-acquisition" / evidence_id
+                acquisition_dir.mkdir(parents=True, exist_ok=True)
+                working_copy_path = acquisition_dir / safe_name
+                with open(working_copy_path, "wb") as wc:
+                    wc.write(content)
+            except OSError as exc:
+                logger.warning(
+                    "Failed to write working copy for %s: %s",
+                    evidence_id,
+                    exc,
+                )
+                working_copy_path = None
+
+            # CoC: identified (phase 2) — the evidence record exists.
+            await conn.execute(
+                """INSERT INTO chain_of_custody_log
+                   (evidence_id, case_id, action, actor,
+                    tool_used, input_hash, notes)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+                row["id"],
+                uuid.UUID(case_id),
+                "identified",
+                "system",
+                "DFIReballz Upload",
+                sha256,
+                (
+                    f"Evidence identified: {safe_name} "
+                    f"(SHA256: {sha256}) | phase=identification"
+                ),
+            )
+
+            # CoC: acquired (phase 3) — original + working copy in place.
+            wc_note = (
+                f"working_copy={working_copy_path}"
+                if working_copy_path is not None
+                else "working_copy=FAILED"
+            )
             await conn.execute(
                 """INSERT INTO chain_of_custody_log
                    (evidence_id, case_id, action, actor,
@@ -278,7 +383,10 @@ class CaseManager:
                 "system",
                 "DFIReballz Upload",
                 sha256,
-                f"Evidence uploaded: {safe_name} (SHA256: {sha256})",
+                (
+                    f"Evidence acquired: {safe_name} "
+                    f"(SHA256: {sha256}) | phase=acquisition | {wc_note}"
+                ),
             )
 
             return dict(row)
