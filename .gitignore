@@ -45,6 +45,7 @@ docker-compose.override.yml
 # Evidence & Cases (never commit actual data)
 cases/*
 !cases/.gitkeep
+!cases/README.md
 evidence/*
 !evidence/.gitkeep
 reports/*

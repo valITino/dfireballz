@@ -2,6 +2,8 @@
 
 Structured investigation playbooks for digital forensics, incident response, and OSINT operations. Each playbook contains YAML front matter with machine-readable step definitions and a Markdown body with analyst guidance.
 
+Playbooks are organized by the canonical six-phase forensic process model defined in [`../docs/forensic-process.md`](../docs/forensic-process.md): **Readiness → Identification → Acquisition → Examination → Analysis → Reporting**. The [phishing-investigation](phishing-investigation.md) playbook is the worked reference for the model; remaining playbooks will be migrated in a follow-up slice.
+
 ## Playbook Index
 
 | Playbook | ID | Description | Estimated Duration |
@@ -10,7 +12,7 @@ Structured investigation playbooks for digital forensics, incident response, and
 | [OSINT Person Investigation](osint-person-investigation.md) | `pb-osint-person-investigation` | Person of interest investigation covering username enumeration, email verification, SpiderFoot and theHarvester scanning, and IOC enrichment. | 30-60 min |
 | [OSINT Domain Investigation](osint-domain-investigation.md) | `pb-osint-domain-investigation` | Domain infrastructure mapping with WHOIS, subdomain enumeration, typosquatting detection, web fingerprinting, passive DNS, Shodan, and VirusTotal. | 30-60 min |
 | [Ransomware Investigation](ransomware-investigation.md) | `pb-ransomware-investigation` | Post-incident ransomware analysis using Volatility memory forensics, file recovery, disk analysis, YARA scanning, network C2 detection, and VT enrichment. | 90-180 min |
-| [Phishing Investigation](phishing-investigation.md) | `pb-phishing-investigation` | Phishing email triage covering header analysis, domain reputation, URL redirect chain analysis, WHOIS, abuse IP checks, and HTML artifact extraction. | 20-45 min |
+| [Phishing Investigation](phishing-investigation.md) | `pb-phishing-investigation` | Phishing email triage organized by the canonical phase model (Readiness → Identification → Acquisition → Examination → Analysis → Reporting). Worked reference for the process model. | 20-45 min |
 | [Network Forensics](network-forensics.md) | `pb-network-forensics` | PCAP investigation with protocol statistics, DNS extraction, HTTP transaction recovery, TLS analysis, security auditing, and geographic IP resolution. | 30-90 min |
 | [Dark Web Trace](dark-web-trace.md) | `pb-dark-web-trace` | Threat actor tracking from an initial IOC through dark web and surface web OSINT pivoting, username correlation, and attribution analysis. | 60-120 min |
 | [Mobile Artifact Analysis](mobile-artifact-analysis.md) | `pb-mobile-artifact-analysis` | Mobile device forensics covering SQLite extraction, location history, app usage analysis, contacts, and call log recovery for Android and iOS. | 60-120 min |
@@ -32,10 +34,20 @@ case_types:
 tools_required:
   - tool-category/tool-name
 estimated_duration: time range
+process_model: dfireballz/forensic-process-v1   # optional; declares phase compliance
+phases:                                          # optional; phases this playbook touches
+  - readiness
+  - identification
+  - acquisition
+  - examination
+  - analysis
+  - reporting
 tags:
   - relevant-tags
 steps:
   - id: step_identifier
+    phase: examination          # optional; one of readiness | identification |
+                                # acquisition | examination | analysis | reporting
     name: Human-Readable Step Name
     tool: tool-category/tool-name
     action: action_to_invoke
@@ -44,6 +56,8 @@ steps:
       key: value
 ---
 ```
+
+**Phase field.** The optional `phase` field on each step tags it to the canonical forensic process model. It is currently informational (the runner does not enforce phase ordering) but is preserved through the chain-of-custody log so every action can be traced back to its phase. Strict phase gating in the orchestrator is a planned follow-up slice. See [`../docs/forensic-process.md`](../docs/forensic-process.md) for entry/exit criteria per phase.
 
 ### Markdown Body
 
