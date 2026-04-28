@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import uuid
 from datetime import UTC, datetime
@@ -9,10 +10,23 @@ from pathlib import Path
 from typing import Any
 
 import asyncpg
+from case_lifecycle import write_closure_manifest, write_precondition
 from fastapi import UploadFile
 
 EVIDENCE_DIR = Path("/evidence")
 CASES_DIR = Path("/cases")
+
+_DEFAULT_DECLARED_MCP_SERVERS = (
+    "kali-forensics",
+    "winforensics",
+    "osint",
+    "threat-intel",
+    "binary-analysis",
+    "network-forensics",
+    "filesystem",
+)
+
+logger = logging.getLogger(__name__)
 
 
 class CaseManager:
@@ -63,11 +77,50 @@ class CaseManager:
                 data.get("investigator"),
             )
 
-            # Create case directory
+            # Create case directory + canonical phase layout, write the
+            # readiness pre-flight precondition manifest, and append a
+            # case_opened CoC entry. Failures here are logged but do
+            # not roll back the DB row — a case that exists in the DB
+            # without on-disk artifacts is recoverable; the inverse is
+            # not.
             case_dir = CASES_DIR / case_number
             case_dir.mkdir(parents=True, exist_ok=True)
+            case_record = dict(row)
+            try:
+                write_precondition(
+                    case_dir,
+                    case_record,
+                    declared_mcp_servers=list(_DEFAULT_DECLARED_MCP_SERVERS),
+                )
+            except OSError as exc:
+                logger.warning(
+                    "Failed to write case-precondition.json for %s: %s",
+                    case_number,
+                    exc,
+                )
 
-            return dict(row)
+            try:
+                await conn.execute(
+                    """INSERT INTO chain_of_custody_log
+                       (case_id, action, actor, notes)
+                       VALUES ($1, $2, $3, $4)""",
+                    row["id"],
+                    "case_opened",
+                    "orchestrator",
+                    (
+                        "Case opened. Phase=readiness. "
+                        "case-precondition.json written under "
+                        "01-readiness/."
+                    ),
+                )
+            except asyncpg.PostgresError as exc:
+                logger.warning(
+                    "Failed to log case_opened CoC entry for %s: %s",
+                    case_number,
+                    exc,
+                )
+
+            return case_record
 
     async def list_cases(
         self, status: str | None = None, case_type: str | None = None
@@ -98,9 +151,16 @@ class CaseManager:
     _CASE_COLUMNS = frozenset({"title", "description", "status", "classification", "investigator"})
 
     async def update_case(self, case_id: str, updates: dict) -> dict | None:
-        """Update case fields."""
+        """Update case fields.
+
+        When ``status`` transitions to ``closed`` (and was not closed
+        before), emit the post-flight closure manifest under
+        ``06-reporting/`` and append a ``case_closed`` CoC entry.
+        """
         if not updates:
             return await self.get_case(case_id)
+
+        prior = await self.get_case(case_id)
 
         async with self.pool.acquire() as conn:
             set_clauses = []
@@ -116,7 +176,50 @@ class CaseManager:
                 f"WHERE id = ${len(params)} RETURNING *"
             )
             row = await conn.fetchrow(query, *params)
-            return dict(row) if row else None
+            if not row:
+                return None
+            updated = dict(row)
+
+            transitioning_to_closed = (
+                updates.get("status") == "closed"
+                and (prior is None or prior.get("status") != "closed")
+            )
+            if transitioning_to_closed:
+                case_dir = CASES_DIR / updated["case_number"]
+                try:
+                    write_closure_manifest(
+                        case_dir,
+                        updated,
+                        closing_examiner=updated.get("investigator"),
+                    )
+                except OSError as exc:
+                    logger.warning(
+                        "Failed to write closure-manifest.json for %s: %s",
+                        updated.get("case_number"),
+                        exc,
+                    )
+                try:
+                    await conn.execute(
+                        """INSERT INTO chain_of_custody_log
+                           (case_id, action, actor, notes)
+                           VALUES ($1, $2, $3, $4)""",
+                        row["id"],
+                        "case_closed",
+                        "orchestrator",
+                        (
+                            "Case closed. Phase=reporting. "
+                            "closure-manifest.json written under "
+                            "06-reporting/."
+                        ),
+                    )
+                except asyncpg.PostgresError as exc:
+                    logger.warning(
+                        "Failed to log case_closed CoC entry for %s: %s",
+                        updated.get("case_number"),
+                        exc,
+                    )
+
+            return updated
 
     # ─── Evidence ────────────────────────────────────────────────────
 
