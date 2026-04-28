@@ -10,96 +10,98 @@ You MUST use the DFIReballz MCP servers and their tools to execute every phase b
 
 ---
 
+## Forensic Process Mapping
+
+Canonical six-phase model from `docs/forensic-process.md`. Incident response touches all six phases; this template structures the IR-specific activities (containment assessment, attack chain, impact) under Examination and Analysis.
+
+---
+
 ## Host Directory Layout
 
-All MCP containers share these mounted directories:
-
 ```
-/cases/                     ← Case working directories (read/write)
-  └── <case-id>/
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts
-      └── timelines/        ← Case-specific timelines
+/cases/<case-id>/
+  ├── 01-readiness/         ← Pre-flight + IR-specific authority (incident scope, contacts)
+  ├── 02-identification/    ← Affected systems, evidence records, classification
+  ├── 03-acquisition/       ← Working copies + verified hashes
+  ├── 04-examination/       ← Forensic extractions
+  ├── 05-analysis/          ← Attack chain, threat-intel, impact assessment, timeline
+  └── 06-reporting/         ← Closure manifest, containment/eradication/recovery plan
 
-/evidence/                  ← Evidence files (READ-ONLY — never modify originals)
-  └── <case-id>/
-
-/reports/                   ← Final reports and deliverables (read/write)
-  └── <case-id>/
+/evidence/<case-id>/        ← READ-ONLY originals
+/reports/<case-id>/         ← Final deliverables
 ```
 
-**Claude Code paths** are prefixed with `/workspace/`:
-`/workspace/cases/`, `/workspace/evidence/` (read-only), `/workspace/reports/`, `/workspace/results/`
-`/workspace/output/` — host-visible output: `findings/`, `screenshots/`, `logs/`, `exports/`, `timelines/`
+**Claude Code paths** are prefixed with `/workspace/`.
 
 ---
 
 ## Documentation & Logging Requirements
 
-1. **Document the process thoroughly** — log every tool invocation, parameters, and result summary. Store process logs in `/reports/<case-id>/process-log.md` (or `/workspace/output/logs/process-log.md`).
-2. **Document every issue, error, warning, and problem thoroughly** — record full details including error messages, the tool/container involved, and remediation steps. Store in `/reports/<case-id>/issues-log.md` (or `/workspace/output/logs/issues-log.md`).
-3. **Log chain of custody** for every evidence access. **Never modify original evidence.**
-4. **Write findings incrementally** to `/cases/<case-id>/artifacts/` or `/workspace/output/findings/`.
+1. **Document every tool invocation** — `process-log.md`.
+2. **Document errors and issues** — `issues-log.md`.
+3. **Log chain of custody** for every evidence access. **Originals are read-only.**
+4. **Write findings incrementally** under the relevant phase directory.
 
 ---
 
-## Phase 1: Triage
+## Phase 1 — Readiness
 
-1. Log chain of custody for all evidence
-2. Identify scope of compromise
-3. Classify incident type (malware, data breach, unauthorized access, insider threat)
-4. Establish investigation timeline boundaries
+1. Confirm IR authorization is documented (incident commander, scope, legal contacts)
+2. Health-check all relevant MCP servers
+3. Verify API keys for threat-intel
+4. Pin tool versions; record IR start timestamp into `01-readiness/case-precondition.json`
 
-## Phase 2: Containment Assessment
+## Phase 2 — Identification
 
-1. Identify compromised systems and accounts
-2. Map network lateral movement
-3. Assess data exfiltration risk
-4. Document active threats still present
+1. **Triage** — initial scope of compromise (affected hosts, accounts, services)
+2. **Classify** the incident (malware, ransomware, data breach, unauthorized access, insider threat)
+3. **Establish** timeline boundaries (first signal, current state)
+4. **Containment-relevant identification** — compromised systems and accounts; map any active threats still present
+5. Assign evidence IDs for every artifact to be collected (disk, memory, EVTX, PCAPs)
+6. Log chain of custody (`identified`)
 
-## Phase 3: Evidence Collection
+## Phase 3 — Acquisition
 
-Use **kali-forensics**, **winforensics**, **network-forensics**, and **filesystem** MCP servers:
-1. **Disk forensics** — Sleuthkit, file carving with Foremost
-2. **Memory forensics** — Volatility3 full analysis
-3. **Windows artifacts** — Full Windows artifact suite (MFT, EVTX, Registry, etc.)
-4. **Network forensics** — PCAP analysis with tshark
-5. **Metadata** — ExifTool on relevant files
+Use **kali-forensics**, **winforensics**, **network-forensics**, **filesystem**:
 
-## Phase 4: Attack Chain Reconstruction
+1. Memory captures first (volatile), then disk images, then logs, then PCAPs
+2. Copy into `cases/<case-id>/03-acquisition/<evidence-id>/`
+3. Compute SHA256 + MD5; independently verify with a second tool
+4. Write acquisition manifest entries
+5. Log chain of custody (`acquired`, `verified`)
 
-1. Initial access vector identification
-2. Execution timeline (Prefetch, Amcache, EVTX)
-3. Persistence mechanisms (Registry, Services, Scheduled Tasks)
-4. Privilege escalation evidence
-5. Lateral movement mapping
-6. Data staging and exfiltration
-7. Anti-forensics and cleanup attempts
+## Phase 4 — Examination
 
-## Phase 5: Threat Intelligence
+Re-verify source hash before each major tool:
 
-Use **threat-intel** MCP server:
-1. IoC enrichment via VirusTotal, ThreatFox, AbuseIPDB
-2. Attribution indicators
-3. MITRE ATT&CK technique mapping
-4. Related campaign identification
+1. **Disk forensics** — Sleuthkit, Foremost (carving)
+2. **Memory forensics** — Volatility3 full suite
+3. **Windows artifacts** — MFT, EVTX, Registry, Prefetch, Amcache, ShellBags, USN Journal, SRUM, Browser history
+4. **Network forensics** — tshark on captured PCAPs
+5. **Metadata** — ExifTool
 
-## Phase 6: Impact Assessment
+## Phase 5 — Analysis
 
-1. Data loss quantification
-2. System compromise scope
-3. Credential exposure assessment
-4. Regulatory notification requirements
+Use **threat-intel**, **osint**, **network-forensics**:
 
-## Phase 7: Reporting
+1. **Attack chain reconstruction** — initial access → execution → persistence → privilege escalation → lateral movement → collection → exfiltration → impact (incl. anti-forensics / cleanup attempts)
+2. **Threat-intel enrichment** — IoCs against VirusTotal, ThreatFox, AbuseIPDB
+3. **Attribution indicators** if applicable
+4. **MITRE ATT&CK technique mapping**
+5. **Related-campaign identification**
+6. **Timeline** unified across all evidence
+7. **Impact assessment** — data loss / exposure quantification, system compromise scope, credential exposure, regulatory notification requirements (GDPR / HIPAA / PCI-DSS / etc.)
+8. Each finding cites evidence ID + SHA256 + audit IDs; fact vs. interpretation
 
-1. Full ForensicPayload with all sections populated
-2. Attack chain with MITRE ATT&CK mapping
-3. Containment, eradication, and recovery recommendations
-4. Lessons learned and prevention measures
-5. Generate report (both MD and PDF) and store in `/reports/<case-id>/`
-6. Store timeline in `/cases/<case-id>/timelines/` or `/workspace/output/timelines/`
-7. Finalize process log and issues log
+## Phase 6 — Reporting
+
+1. `get_payload_schema` → populate full ForensicPayload (every applicable section)
+2. Attach attack chain (with ATT&CK mapping), impact assessment, IoC table
+3. Provide containment / eradication / recovery recommendations + lessons learned
+4. Re-verify all source-evidence hashes
+5. `aggregate_results` → `generate_report` format `"both"`
+6. Write `06-reporting/closure-manifest.json`; log `case_closed`
+7. Finalize process + issues logs
 
 ## MCP Containers to Use
 

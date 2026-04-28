@@ -5,7 +5,9 @@ description: >
   Comprehensive domain investigation playbook for mapping infrastructure,
   identifying ownership, enumerating subdomains, detecting typosquatting,
   fingerprinting web technologies, and enriching findings through passive
-  DNS, Shodan, and VirusTotal.
+  DNS, Shodan, and VirusTotal. Steps are phase-tagged against the
+  DFIReballz forensic process model; see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - osint
   - domain-investigation
@@ -20,6 +22,10 @@ tools_required:
   - osint/shodan
   - threat-intel/virustotal
 estimated_duration: 30-60 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
+  - analysis
 tags:
   - osint
   - domain
@@ -29,6 +35,7 @@ tags:
   - typosquatting
 steps:
   - id: whois_lookup
+    phase: examination
     name: WHOIS Lookup
     tool: osint/whois_lookup
     action: query_whois
@@ -44,6 +51,7 @@ steps:
       output_format: json
 
   - id: subdomain_enum
+    phase: examination
     name: Subdomain Enumeration
     tool: osint/subdomain_enum
     action: enumerate_subdomains
@@ -67,6 +75,7 @@ steps:
       output_format: json
 
   - id: dns_twist
+    phase: examination
     name: DNS Typosquatting Detection
     tool: osint/dns_twist
     action: detect_typosquats
@@ -95,6 +104,7 @@ steps:
       output_format: json
 
   - id: web_fingerprint
+    phase: examination
     name: Web Technology Fingerprinting
     tool: osint/web_fingerprint
     action: fingerprint
@@ -115,6 +125,7 @@ steps:
       output_format: json
 
   - id: passive_dns
+    phase: examination
     name: Passive DNS Analysis
     tool: osint/passive_dns
     action: query_pdns
@@ -135,6 +146,7 @@ steps:
       output_format: json
 
   - id: shodan_host
+    phase: examination
     name: Shodan Host Intelligence
     tool: osint/shodan_host
     action: search_host
@@ -155,6 +167,7 @@ steps:
       output_format: json
 
   - id: vt_domain_check
+    phase: analysis
     name: VirusTotal Domain Report
     tool: threat-intel/vt_lookup
     action: lookup_domain
@@ -182,6 +195,8 @@ steps:
 
 This playbook provides a structured methodology for investigating a domain from initial WHOIS registration through full infrastructure mapping, typosquatting detection, and threat intelligence enrichment.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). Readiness, identification (the target domain), and reporting are handled by the orchestrator's pre-flight (planned); this playbook covers examination and analysis. OSINT data fetches that parse public records are tagged `examination`; reputation/correlation steps that interpret the data are tagged `analysis`.
+
 ## Prerequisites
 
 - Target domain name
@@ -192,13 +207,18 @@ This playbook provides a structured methodology for investigating a domain from 
 
 ## Workflow
 
-1. **WHOIS Lookup** -- Identify domain ownership and registration details
-2. **Subdomain Enumeration** -- Map the full subdomain landscape
-3. **DNS Typosquatting Detection** -- Find impersonation and brand abuse domains
-4. **Web Fingerprinting** -- Identify technologies and potential vulnerabilities
-5. **Passive DNS** -- Analyze historical DNS and infrastructure relationships
-6. **Shodan Host Intelligence** -- Assess exposed services and vulnerabilities
-7. **VirusTotal Domain Report** -- Check community reputation and malicious associations
+### Phase 4 — Examination
+
+1. **WHOIS Lookup** — identify domain ownership and registration details.
+2. **Subdomain Enumeration** — map the full subdomain landscape.
+3. **DNS Typosquatting Detection** — find impersonation and brand abuse domains.
+4. **Web Fingerprinting** — identify technologies and potential vulnerabilities.
+5. **Passive DNS** — analyze historical DNS and infrastructure relationships.
+6. **Shodan Host Intelligence** — assess exposed services and vulnerabilities.
+
+### Phase 5 — Analysis
+
+7. **VirusTotal Domain Report** — check community reputation and malicious associations; correlate with examination findings.
 
 ## Decision Points
 
@@ -209,10 +229,7 @@ This playbook provides a structured methodology for investigating a domain from 
 
 ## Output Artifacts
 
-- WHOIS registration report
-- Subdomain enumeration map with resolved IPs
-- Typosquatting detection results
-- Web technology fingerprint report
-- Passive DNS timeline
-- Shodan host intelligence report
-- VirusTotal domain reputation report
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — WHOIS registration report; subdomain enumeration map with resolved IPs; typosquatting detection results; web technology fingerprint report; passive DNS timeline; Shodan host intelligence report
+- **05 Analysis** — VirusTotal domain reputation report

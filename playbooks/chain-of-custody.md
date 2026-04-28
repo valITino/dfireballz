@@ -6,7 +6,10 @@ description: >
   digital forensics evidence handling. Covers evidence identification,
   acquisition methods, cryptographic hash verification, labeling
   standards, transfer documentation, and storage requirements.
-  Ensures evidentiary integrity and legal admissibility.
+  Ensures evidentiary integrity and legal admissibility. Steps are
+  phase-tagged against the DFIReballz forensic process model
+  (identification → acquisition); see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - all
   - digital-forensics
@@ -17,6 +20,10 @@ tools_required:
   - kali-forensics/hashdeep
   - documentation/coc_generator
 estimated_duration: 15-30 minutes per evidence item
+process_model: dfireballz/forensic-process-v1
+phases:
+  - identification
+  - acquisition
 tags:
   - chain-of-custody
   - evidence-handling
@@ -26,6 +33,7 @@ tags:
   - acquisition
 steps:
   - id: evidence_identification
+    phase: identification
     name: Evidence Identification and Logging
     tool: documentation/coc_generator
     action: create_evidence_record
@@ -56,6 +64,7 @@ steps:
       output_format: json
 
   - id: acquisition_imaging
+    phase: acquisition
     name: Forensic Acquisition
     tool: kali-forensics/dc3dd_hash
     action: forensic_image
@@ -85,6 +94,7 @@ steps:
         start_time: "{{timestamp.now}}"
 
   - id: hash_verification
+    phase: acquisition
     name: Hash Verification
     tool: kali-forensics/hashdeep
     action: verify_hashes
@@ -108,6 +118,7 @@ steps:
       verification_time: "{{timestamp.now}}"
 
   - id: evidence_labeling
+    phase: acquisition
     name: Evidence Labeling
     tool: documentation/coc_generator
     action: generate_label
@@ -136,6 +147,7 @@ steps:
       output_dir: "{{case.evidence_store}}/labels"
 
   - id: transfer_documentation
+    phase: acquisition
     name: Transfer Documentation
     tool: documentation/coc_generator
     action: log_transfer
@@ -170,6 +182,7 @@ steps:
       output_format: json
 
   - id: storage_documentation
+    phase: acquisition
     name: Storage Documentation
     tool: documentation/coc_generator
     action: log_storage
@@ -210,6 +223,8 @@ steps:
 
 This playbook establishes the standard protocol for chain of custody documentation in digital forensics investigations. It ensures that all evidence is properly identified, acquired, verified, labeled, and tracked throughout its lifecycle to maintain evidentiary integrity and legal admissibility.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). The first step belongs to the Identification phase; the remaining five belong to the Acquisition phase. Other playbooks reference this one as the canonical evidence-handling protocol; downstream Examination/Analysis/Reporting work depends on the records produced here.
+
 ## Prerequisites
 
 - Evidence collection authorization (warrant, consent, or organizational policy)
@@ -222,12 +237,17 @@ This playbook establishes the standard protocol for chain of custody documentati
 
 ## Workflow
 
-1. **Evidence Identification** -- Document and photograph evidence before handling
-2. **Forensic Acquisition** -- Create verified forensic image with hash computation
-3. **Hash Verification** -- Independently verify image integrity
-4. **Evidence Labeling** -- Apply standardized tamper-evident labels
-5. **Transfer Documentation** -- Log every custody transfer with signatures
-6. **Storage Documentation** -- Record storage location and access controls
+### Phase 2 — Identification
+
+1. **Evidence Identification** — document and photograph evidence before handling; assign evidence ID; record authority.
+
+### Phase 3 — Acquisition
+
+2. **Forensic Acquisition** — create verified forensic image with hash computation.
+3. **Hash Verification** — independently verify image integrity with a second tool.
+4. **Evidence Labeling** — apply standardized tamper-evident labels.
+5. **Transfer Documentation** — log every custody transfer with signatures and integrity check.
+6. **Storage Documentation** — record storage location, environmental controls, access list.
 
 ## Labeling Standards
 
@@ -268,9 +288,7 @@ Evidence labels must include:
 
 ## Output Artifacts
 
-- Evidence identification record with photographs
-- Forensic acquisition log with source/destination hashes
-- Independent hash verification report
-- Printed evidence labels
-- Chain of custody transfer log
-- Storage location record
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **02 Identification** — evidence identification record with photographs
+- **03 Acquisition** — forensic acquisition log with source/destination hashes; independent hash verification report; printed evidence labels; chain of custody transfer log; storage location record

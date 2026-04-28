@@ -10,77 +10,97 @@ You MUST use the DFIReballz MCP servers and their tools to execute every phase b
 
 ---
 
+## Forensic Process Mapping
+
+Canonical six-phase model from `docs/forensic-process.md`. Companion playbook: `playbooks/osint-person-investigation.md`.
+
+The "evidence" is the target identifiers (username, email, name). Acquisition fetches public records into the case directory; parsed extractions are Examination; correlation/attribution is Analysis.
+
+---
+
 ## Host Directory Layout
 
-All MCP containers share these mounted directories:
-
 ```
-/cases/                     ← Case working directories (read/write)
-  └── <case-id>/
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts
-      └── timelines/        ← Case-specific timelines
+/cases/<case-id>/
+  ├── 01-readiness/         ← Pre-flight
+  ├── 02-identification/    ← Target record, identifiers, scope, authority
+  ├── 03-acquisition/       ← Raw fetched records + hashes
+  ├── 04-examination/       ← Username/email enumeration, harvester output
+  ├── 05-analysis/          ← Persona correlation, IoC enrichment, footprint
+  └── 06-reporting/         ← Closure manifest
 
-/evidence/                  ← Evidence files (READ-ONLY — never modify originals)
-  └── <case-id>/
-
-/reports/                   ← Final reports and deliverables (read/write)
-  └── <case-id>/
+/reports/<case-id>/         ← Final deliverables
 ```
 
-**Claude Code paths** are prefixed with `/workspace/`:
-`/workspace/cases/`, `/workspace/evidence/` (read-only), `/workspace/reports/`, `/workspace/results/`
-`/workspace/output/` — host-visible output: `findings/`, `screenshots/`, `logs/`, `exports/`, `timelines/`
+**Claude Code paths** are prefixed with `/workspace/`.
 
 ---
 
 ## Documentation & Logging Requirements
 
-1. **Document the process thoroughly** — log every tool invocation, parameters, and result summary. Store process logs in `/reports/<case-id>/process-log.md` (or `/workspace/output/logs/process-log.md`).
-2. **Document every issue, error, warning, and problem thoroughly** — record full details including error messages, the tool/container involved, and remediation steps. Store in `/reports/<case-id>/issues-log.md` (or `/workspace/output/logs/issues-log.md`).
-3. **Log chain of custody** for every evidence access. **Never modify original evidence.**
-4. **Write findings incrementally** to `/cases/<case-id>/artifacts/` or `/workspace/output/findings/`.
+1. **Document every tool invocation** — `process-log.md`.
+2. **Document errors and issues** — `issues-log.md`.
+3. **Log chain of custody** for every record fetched.
+4. **Write findings incrementally** under the relevant phase directory.
+5. **Legal scope** — every fetch must be within authorized scope. Do not interact with or log into discovered accounts. Comply with GDPR / CCPA / local privacy law.
 
 ---
 
-## Phase 1: Username/Email Enumeration
+## Phase 1 — Readiness
 
-Use **osint** MCP server:
-1. **Maigret** — Search username across 2500+ platforms
-2. **Sherlock** — Social media platform search
-3. **Holehe** — Check email registration on services
-4. **h8mail** — Breach database lookup (if configured)
+1. Confirm case is open with documented investigation authority and the legal scope (jurisdiction + privacy regime)
+2. Health-check MCP servers: osint, threat-intel, filesystem
+3. Verify SpiderFoot is configured with API keys; theHarvester data sources keyed
+4. Pin tool versions (Maigret, Sherlock, Holehe) into `01-readiness/case-precondition.json`
 
-## Phase 2: Domain/Infrastructure
+## Phase 2 — Identification
 
-Use **osint** MCP server:
-1. **theHarvester** — Harvest emails, subdomains, names from public sources
-2. **SpiderFoot** — Automated OSINT collection and correlation
-3. **subfinder** — Discover associated subdomains
+1. Create the target record: identifiers (at least one of username, email, full name, phone), scope, authority
+2. Assign case-scoped evidence ID
+3. Log chain of custody (`identified`)
 
-## Phase 3: Threat Intelligence
+## Phase 3 — Acquisition
 
-Use **threat-intel** MCP server:
-1. Check known IPs on AbuseIPDB
-2. Shodan search for associated infrastructure
-3. URLScan for web presence analysis
+Fetch raw public records into `cases/<case-id>/03-acquisition/<evidence-id>/`:
 
-## Phase 4: Correlation
+1. Maigret/Sherlock raw outputs (per-platform)
+2. Holehe raw output
+3. theHarvester raw output
+4. SpiderFoot scan exports
+5. Hash each fetched artifact (SHA256)
+6. Write acquisition manifest entry; log chain of custody (`acquired`)
 
-1. Cross-reference usernames across platforms
-2. Map the digital footprint
-3. Identify potential aliases
-4. Document timeline of online activity
+## Phase 4 — Examination
 
-## Phase 5: Reporting
+Use **osint**:
 
-1. Structure findings with IoCs and user_accounts
-2. Include platform presence map
-3. Generate report and store in `/reports/<case-id>/`
-4. Finalize process log and issues log
+1. **Username enumeration** — Maigret (2500+ platforms), Sherlock (social media), Holehe (email registration)
+2. **Email verification** — deliverability, breach checks, associated services
+3. **Domain / infrastructure** — theHarvester (emails, subdomains, hosts), subfinder
+4. **SpiderFoot scan** — broad OSINT correlation across social, paste, breach, dns, whois, darkweb modules
+5. **h8mail** breach lookup (if configured)
+
+## Phase 5 — Analysis
+
+Use **threat-intel** + osint correlation:
+
+1. **Persona correlation** — link aliases, registration timing, shared infrastructure, language patterns
+2. **IoC enrichment** — domains/IPs/emails against VirusTotal, AbuseIPDB, OTX, Shodan, GreyNoise
+3. **Digital footprint map** — confirmed accounts + timeline of online activity
+4. **Attribution indicators** if applicable
+5. Each finding cites: source artifact + SHA256 + audit IDs; fact vs. interpretation
+
+## Phase 6 — Reporting
+
+1. `get_payload_schema` → populate ForensicPayload (`user_accounts`, `iocs`)
+2. Include the platform-presence map and persona graph
+3. Document scope adherence and legal basis
+4. `aggregate_results` → `generate_report` format `"both"`
+5. Write `06-reporting/closure-manifest.json`; log `case_closed`
+6. Finalize process + issues logs
 
 ## MCP Containers to Use
 
 - osint (Maigret, Sherlock, Holehe, SpiderFoot, theHarvester, subfinder)
-- threat-intel (AbuseIPDB, Shodan, URLScan)
-- filesystem (evidence and report file access)
+- threat-intel (VirusTotal, AbuseIPDB, Shodan, URLScan, GreyNoise)
+- filesystem (case + report file access)

@@ -10,88 +10,99 @@ You MUST use the DFIReballz MCP servers and their tools to execute every phase b
 
 ---
 
+## Forensic Process Mapping
+
+Canonical six-phase model from `docs/forensic-process.md`.
+
+---
+
 ## Host Directory Layout
 
-All MCP containers share these mounted directories:
-
 ```
-/cases/                     ← Case working directories (read/write)
-  └── <case-id>/
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts
-      └── timelines/        ← Case-specific timelines
+/cases/<case-id>/
+  ├── 01-readiness/         ← Pre-flight
+  ├── 02-identification/    ← Memory dump record, source system, authority
+  ├── 03-acquisition/       ← Working copy + hashes
+  ├── 04-examination/       ← Volatility plugin outputs, dumps, strings
+  ├── 05-analysis/          ← IoC enrichment, ATT&CK mapping, timeline
+  └── 06-reporting/         ← Closure manifest
 
-/evidence/                  ← Evidence files (READ-ONLY — never modify originals)
-  └── <case-id>/
-
-/reports/                   ← Final reports and deliverables (read/write)
-  └── <case-id>/
+/evidence/<case-id>/        ← READ-ONLY originals
+/reports/<case-id>/         ← Final deliverables
 ```
 
-**Claude Code paths** are prefixed with `/workspace/`:
-`/workspace/cases/`, `/workspace/evidence/` (read-only), `/workspace/reports/`, `/workspace/results/`
-`/workspace/output/` — host-visible output: `findings/`, `screenshots/`, `logs/`, `exports/`, `timelines/`
+**Claude Code paths** are prefixed with `/workspace/`.
 
 ---
 
 ## Documentation & Logging Requirements
 
-1. **Document the process thoroughly** — log every tool invocation, parameters, and result summary. Store process logs in `/reports/<case-id>/process-log.md` (or `/workspace/output/logs/process-log.md`).
-2. **Document every issue, error, warning, and problem thoroughly** — record full details including error messages, the tool/container involved, and remediation steps. Store in `/reports/<case-id>/issues-log.md` (or `/workspace/output/logs/issues-log.md`).
-3. **Log chain of custody** for every evidence access. **Never modify original evidence.**
-4. **Write findings incrementally** to `/cases/<case-id>/artifacts/` or `/workspace/output/findings/`.
+1. **Document every tool invocation** — `process-log.md`.
+2. **Document errors and issues** — `issues-log.md`.
+3. **Log chain of custody** for every memory-dump access. **Original is read-only.**
+4. **Write findings incrementally** under the relevant phase directory.
 
 ---
 
-## Phase 1: Evidence Handling
+## Phase 1 — Readiness
 
-1. Log chain of custody for the memory dump
-2. Verify memory dump integrity (SHA256 hash)
-3. Identify OS profile (Volatility3 auto-detection)
+1. Confirm case is open with authority for the source system
+2. Health-check MCP servers: kali-forensics, threat-intel, filesystem
+3. Verify Volatility3 symbol tables for the suspected OS profile are available
+4. Pin Volatility3 + YARA rule-set versions into `01-readiness/case-precondition.json`
 
-## Phase 2: Process Analysis
+## Phase 2 — Identification
 
-Use **kali-forensics** MCP server:
-1. **Process listing** — List all processes (pslist, pstree, psxview)
-2. **Hidden processes** — Detect hidden/unlinked processes
-3. **Process injection** — Identify injected code (malfind)
-4. **DLL analysis** — Loaded modules, suspicious DLLs (dlllist, ldrmodules)
-5. **Handles** — Open handles to files, registry keys, network
+1. Create the memory-dump evidence record: source system, capture method, capture tool/version, time of capture
+2. Identify OS profile (Volatility3 auto-detection)
+3. Assign case-scoped evidence ID
+4. Log chain of custody (`identified`)
 
-## Phase 3: Network Analysis
+## Phase 3 — Acquisition
 
-Use **kali-forensics** MCP server:
-1. **Network connections** — Active TCP/UDP connections (netscan)
-2. **DNS cache** — Cached DNS lookups
-3. **Listening ports** — Identify backdoor listeners
+1. Copy dump to `cases/<case-id>/03-acquisition/<evidence-id>/`
+2. Compute SHA256 + MD5
+3. Independently verify with `hashdeep`
+4. Write acquisition manifest entry
+5. Log chain of custody (`acquired`, `verified`)
 
-## Phase 4: Persistence & Artifacts
+## Phase 4 — Examination
 
-Use **kali-forensics** MCP server:
-1. **Registry** — Run keys, services, scheduled tasks
-2. **Command history** — Console/PowerShell history (cmdscan, consoles)
-3. **File objects** — Files mapped in memory (filescan)
-4. **Clipboard** — Clipboard contents
-5. **User credentials** — Cached credentials (hashdump, lsadump)
+Re-verify source hash before each major plugin run. Use **kali-forensics**:
 
-## Phase 5: Malware Detection
+1. **Process analysis** — pslist, pstree, psxview; detect hidden/unlinked processes; malfind for injection
+2. **DLL analysis** — dlllist, ldrmodules; flag suspicious modules
+3. **Handles** — open files, registry keys, network handles
+4. **Network connections** — netscan (active TCP/UDP), DNS cache, listening ports / backdoor listeners
+5. **Persistence artifacts** — registry Run keys, services, scheduled tasks from memory
+6. **Command history** — cmdscan, consoles
+7. **File objects** — filescan
+8. **Clipboard** — clipboard contents
+9. **Credentials** (if authorized) — hashdump, lsadump
+10. **YARA across memory** — yarascan
+11. **Strings + entropy** of suspicious processes
+12. **bulk_extractor** carving — emails, URLs, credit-card numbers
 
-Use **kali-forensics** MCP server:
-1. **YARA** — Scan memory with YARA rules (yarascan)
-2. **Strings** — Extract strings from suspicious processes
-3. **Entropy** — Identify packed/encrypted regions
-4. **bulk_extractor** — Carve email addresses, URLs, credit card numbers
+## Phase 5 — Analysis
 
-## Phase 6: Reporting
+Use **threat-intel**:
 
-1. Structure findings with processes, network_connections, artifacts
-2. Include memory-specific IoCs
-3. Map to MITRE ATT&CK techniques
-4. Generate report and store in `/reports/<case-id>/`
-5. Finalize process log and issues log
+1. **VirusTotal / ThreatFox** lookups on extracted hashes, IPs, domains
+2. **Correlate** memory findings (processes ↔ network ↔ persistence) into an attack chain
+3. **MITRE ATT&CK mapping** for identified techniques
+4. **Timeline** of in-memory artifacts vs. external indicators
+5. Each finding cites source-dump SHA256 + audit IDs; fact vs. interpretation
+
+## Phase 6 — Reporting
+
+1. `get_payload_schema` → populate ForensicPayload (`processes`, `network_connections`, `artifacts`, `iocs`, `mitre_techniques`)
+2. Re-verify source-dump hash
+3. `aggregate_results` → `generate_report` format `"both"`
+4. Write `06-reporting/closure-manifest.json`; log `case_closed`
+5. Finalize process + issues logs
 
 ## MCP Containers to Use
 
-- kali-forensics (Volatility3, YARA, bulk_extractor, ExifTool)
-- threat-intel (VirusTotal for hash lookups, ThreatFox for IoCs)
-- filesystem (evidence and report file access)
+- kali-forensics (Volatility3, YARA, bulk_extractor, ExifTool, hashdeep)
+- threat-intel (VirusTotal, ThreatFox)
+- filesystem (evidence access)

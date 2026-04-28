@@ -2,7 +2,7 @@
 
 Structured investigation playbooks for digital forensics, incident response, and OSINT operations. Each playbook contains YAML front matter with machine-readable step definitions and a Markdown body with analyst guidance.
 
-Playbooks are organized by the canonical six-phase forensic process model defined in [`../docs/forensic-process.md`](../docs/forensic-process.md): **Readiness → Identification → Acquisition → Examination → Analysis → Reporting**. The [phishing-investigation](phishing-investigation.md) playbook is the worked reference for the model; remaining playbooks will be migrated in a follow-up slice.
+Playbooks are organized by the canonical six-phase forensic process model defined in [`../docs/forensic-process.md`](../docs/forensic-process.md): **Readiness → Identification → Acquisition → Examination → Analysis → Reporting**. Every playbook is phase-tagged; the [phishing-investigation](phishing-investigation.md) playbook spans all six phases as the worked reference. Other playbooks cover the phases relevant to their scope (e.g. chain-of-custody covers identification + acquisition; mobile-artifact-analysis is pure examination); pre-flight readiness and post-flight reporting are produced by the orchestrator (planned slice) for those.
 
 ## Playbook Index
 
