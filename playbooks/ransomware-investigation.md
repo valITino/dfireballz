@@ -5,8 +5,9 @@ description: >
   End-to-end ransomware investigation playbook covering memory forensics
   with Volatility, file recovery with Foremost, disk analysis with
   Sleuth Kit, YARA signature scanning, network forensics for C2 detection,
-  and VirusTotal enrichment. Designed for post-incident analysis of
-  ransomware-affected systems.
+  and VirusTotal enrichment. Steps are phase-tagged against the
+  DFIReballz forensic process model; see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - ransomware
   - incident-response
@@ -19,6 +20,10 @@ tools_required:
   - network-forensics/wireshark
   - threat-intel/virustotal
 estimated_duration: 90-180 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
+  - analysis
 tags:
   - ransomware
   - memory-forensics
@@ -28,6 +33,7 @@ tags:
   - c2-detection
 steps:
   - id: volatility_pslist
+    phase: examination
     name: Memory Analysis - Process Listing
     tool: kali-forensics/volatility_run
     action: pslist
@@ -46,6 +52,7 @@ steps:
         - "{{target.suspicious_pids}}"
 
   - id: volatility_netscan
+    phase: examination
     name: Memory Analysis - Network Connections
     tool: kali-forensics/volatility_run
     action: netscan
@@ -64,6 +71,7 @@ steps:
         - SYN_SENT
 
   - id: volatility_malfind
+    phase: examination
     name: Memory Analysis - Malicious Code Detection
     tool: kali-forensics/volatility_run
     action: malfind
@@ -80,6 +88,7 @@ steps:
       include_dump: true
 
   - id: foremost_recover
+    phase: examination
     name: File Recovery
     tool: kali-forensics/foremost_recover
     action: recover_files
@@ -104,6 +113,7 @@ steps:
       audit_file: true
 
   - id: sleuthkit_analyze
+    phase: examination
     name: Disk Image Analysis
     tool: kali-forensics/sleuthkit_analyze
     action: analyze_image
@@ -132,6 +142,7 @@ steps:
       output_dir: "{{case.working_dir}}/sleuthkit_output"
 
   - id: yara_scan
+    phase: examination
     name: YARA Ransomware Scan
     tool: binary-analysis/yara_match
     action: scan_with_rules
@@ -153,6 +164,7 @@ steps:
       output_format: json
 
   - id: network_c2_detection
+    phase: analysis
     name: Network Forensics - C2 Detection
     tool: network-forensics/wireshark_analyze_pcap
     action: analyze_pcap
@@ -176,6 +188,7 @@ steps:
       export_conversations: true
 
   - id: vt_enrichment
+    phase: analysis
     name: VirusTotal Enrichment
     tool: threat-intel/vt_lookup
     action: bulk_lookup
@@ -201,6 +214,8 @@ steps:
 
 This playbook guides investigators through a structured ransomware incident investigation, from memory forensics through disk analysis, file recovery, and threat intelligence enrichment. It is designed for post-compromise analysis of systems affected by ransomware.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). Readiness, identification, acquisition, and reporting are handled by the orchestrator's pre-flight (planned) and the chain-of-custody playbook; this playbook covers examination and analysis of already-acquired memory, disk, and PCAP evidence.
+
 ## Prerequisites
 
 - Memory dump from the affected system (raw or crashdump format)
@@ -213,14 +228,19 @@ This playbook guides investigators through a structured ransomware incident inve
 
 ## Workflow
 
-1. **Process Listing** -- Enumerate and analyze running processes from memory
-2. **Network Connections** -- Extract network connections and identify C2
-3. **Malicious Code Detection** -- Find injected code and hollowed processes
-4. **File Recovery** -- Recover deleted files including ransom notes and payloads
-5. **Disk Analysis** -- Timeline analysis and artifact recovery from disk image
-6. **YARA Scan** -- Match artifacts against ransomware signatures
-7. **C2 Detection** -- Analyze network traffic for C2 and exfiltration
-8. **VirusTotal Enrichment** -- Identify ransomware family and campaign
+### Phase 4 — Examination
+
+1. **Process Listing** — enumerate and analyze running processes from memory.
+2. **Network Connections** — extract network connections from memory.
+3. **Malicious Code Detection** — find injected code and hollowed processes.
+4. **File Recovery** — recover deleted files including ransom notes and payloads.
+5. **Disk Analysis** — timeline analysis and artifact recovery from disk image.
+6. **YARA Scan** — match artifacts against ransomware signatures.
+
+### Phase 5 — Analysis
+
+7. **C2 Detection** — analyze network traffic for C2 and exfiltration; correlate with memory findings.
+8. **VirusTotal Enrichment** — identify ransomware family and campaign.
 
 ## Decision Points
 
@@ -239,11 +259,7 @@ This playbook guides investigators through a structured ransomware incident inve
 
 ## Output Artifacts
 
-- Process listing and analysis report
-- Network connection map with C2 indicators
-- Malfind dump files and analysis
-- Recovered files inventory
-- Filesystem timeline
-- YARA match report
-- Network forensics report with C2 indicators
-- VirusTotal enrichment report with ransomware family identification
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — process listing report; network connection map; malfind dumps; recovered files inventory; filesystem timeline; YARA match report
+- **05 Analysis** — network forensics report with C2 indicators; VirusTotal enrichment report with ransomware family identification

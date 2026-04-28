@@ -10,81 +10,95 @@ You MUST use the DFIReballz MCP servers and their tools to execute every phase b
 
 ---
 
+## Forensic Process Mapping
+
+Canonical six-phase model from `docs/forensic-process.md`. Companion playbook: `playbooks/osint-domain-investigation.md`.
+
+For OSINT, the "evidence" is the target itself (a domain/IP). Acquisition consists of fetching public records into the case directory; data fetches that parse public records are tagged Examination; reputation/correlation steps are tagged Analysis.
+
+---
+
 ## Host Directory Layout
 
-All MCP containers share these mounted directories:
-
 ```
-/cases/                     ← Case working directories (read/write)
-  └── <case-id>/
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts
-      └── timelines/        ← Case-specific timelines
+/cases/<case-id>/
+  ├── 01-readiness/         ← Pre-flight
+  ├── 02-identification/    ← Target record, scope, authority
+  ├── 03-acquisition/       ← Raw fetched records (WHOIS, DNS, certs) + hashes
+  ├── 04-examination/       ← Parsed extractions, subdomain map, fingerprints
+  ├── 05-analysis/          ← Reputation, threat assessment, attribution
+  └── 06-reporting/         ← Closure manifest
 
-/evidence/                  ← Evidence files (READ-ONLY — never modify originals)
-  └── <case-id>/
-
-/reports/                   ← Final reports and deliverables (read/write)
-  └── <case-id>/
+/reports/<case-id>/         ← Final deliverables
 ```
 
-**Claude Code paths** are prefixed with `/workspace/`:
-`/workspace/cases/`, `/workspace/evidence/` (read-only), `/workspace/reports/`, `/workspace/results/`
-`/workspace/output/` — host-visible output: `findings/`, `screenshots/`, `logs/`, `exports/`, `timelines/`
+**Claude Code paths** are prefixed with `/workspace/`.
 
 ---
 
 ## Documentation & Logging Requirements
 
-1. **Document the process thoroughly** — log every tool invocation, parameters, and result summary. Store process logs in `/reports/<case-id>/process-log.md` (or `/workspace/output/logs/process-log.md`).
-2. **Document every issue, error, warning, and problem thoroughly** — record full details including error messages, the tool/container involved, and remediation steps. Store in `/reports/<case-id>/issues-log.md` (or `/workspace/output/logs/issues-log.md`).
-3. **Log chain of custody** for every evidence access. **Never modify original evidence.**
-4. **Write findings incrementally** to `/cases/<case-id>/artifacts/` or `/workspace/output/findings/`.
+1. **Document every tool invocation** — `process-log.md`.
+2. **Document errors and issues** — `issues-log.md`.
+3. **Log chain of custody** for every record fetched. Original public records are immutable but each fetch is a discrete evidentiary act — log it.
+4. **Write findings incrementally** under the relevant phase directory.
 
 ---
 
-## Phase 1: DNS & Subdomain Enumeration
+## Phase 1 — Readiness
 
-Use **osint** MCP server:
-1. **subfinder** — Passive subdomain discovery
-2. **DNSTwist** — Typosquatting and phishing domain detection
-3. **theHarvester** — Email and subdomain harvesting
-4. DNS record enumeration (A, AAAA, MX, NS, TXT, CNAME)
+1. Confirm case is open with documented investigation authority and scope
+2. Health-check MCP servers: osint, threat-intel, filesystem
+3. Verify API keys: Shodan, SecurityTrails, VirusTotal, Censys, URLScan
+4. Pin tool versions (subfinder, DNSTwist, theHarvester) into `01-readiness/case-precondition.json`
 
-## Phase 2: Infrastructure Analysis
+## Phase 2 — Identification
 
-Use **threat-intel** MCP server:
-1. **Shodan** — Exposed services, ports, technologies
-2. **URLScan** — Web page analysis and screenshot
-3. WHOIS lookup — Registration details, dates, registrant
-4. SSL certificate analysis — Issuer, SAN, validity
+1. Create the target record: domain, scope (subdomains, related infrastructure), investigation authority
+2. Assign case-scoped evidence ID for the target
+3. Log chain of custody (`identified`)
 
-## Phase 3: Threat Assessment
+## Phase 3 — Acquisition
 
-Use **threat-intel** MCP server:
-1. **AbuseIPDB** — Check hosting IPs for abuse reports
-2. **ThreatFox** — IoC lookup for associated malware
-3. **VirusTotal** — Domain reputation check
-4. Historical DNS records analysis
+Fetch raw public records into `cases/<case-id>/03-acquisition/<evidence-id>/`:
 
-## Phase 4: Web Presence
+1. WHOIS raw output
+2. DNS records (A, AAAA, MX, NS, TXT, CNAME)
+3. SSL certificate(s)
+4. Hash each fetched artifact (SHA256)
+5. Write acquisition manifest entry; log chain of custody (`acquired`)
 
-Use **osint** MCP server:
-1. Technology detection
-2. Security header analysis
-3. Associated email addresses
-4. Historical changes (if available)
+## Phase 4 — Examination
 
-## Phase 5: Reporting
+Use **osint** and **threat-intel**:
 
-1. Structure findings with dns_records, whois, IoCs
-2. Include infrastructure map
-3. Provide risk assessment
-4. Generate report and store in `/reports/<case-id>/`
-5. Finalize process log and issues log
+1. **DNS & subdomain enumeration** — subfinder (passive), DNSTwist (typosquatting/homoglyph), theHarvester
+2. **Web technology fingerprinting** — servers, frameworks, CMS, JS libraries, security headers
+3. **Infrastructure** — Shodan for exposed services / vulns; URLScan for screenshot + behavior
+4. **WHOIS parsing** — registrant, registrar, dates, name servers
+5. **SSL certificate analysis** — issuer, SAN, validity, certificate transparency
+6. **Passive DNS** — historical resolutions
+
+## Phase 5 — Analysis
+
+Use **threat-intel**:
+
+1. **Reputation** — VirusTotal domain report, AbuseIPDB on hosting IPs, ThreatFox for IoC matches
+2. **Historical analysis** — past resolutions, prior owners, known-bad associations
+3. **Risk assessment** — correlate fingerprint, exposure, and reputation signals
+4. **Attribution indicators** — shared infrastructure, registration patterns
+5. Each finding cites: contributing examination artifact paths + SHA256 + audit IDs; fact vs. interpretation
+
+## Phase 6 — Reporting
+
+1. `get_payload_schema` → populate ForensicPayload (`dns_records`, `iocs`, `mitre_techniques` if applicable)
+2. Include infrastructure map + risk assessment
+3. `aggregate_results` → `generate_report` format `"both"`
+4. Write `06-reporting/closure-manifest.json`; log `case_closed`
+5. Finalize process + issues logs
 
 ## MCP Containers to Use
 
-- osint (subfinder, DNSTwist, theHarvester, SpiderFoot)
+- osint (subfinder, DNSTwist, theHarvester, SpiderFoot, web fingerprint)
 - threat-intel (Shodan, AbuseIPDB, URLScan, VirusTotal, ThreatFox)
-- filesystem (evidence and report file access)
+- filesystem (case + report file access)

@@ -5,8 +5,9 @@ description: >
   Network forensics playbook for comprehensive PCAP analysis using
   Wireshark/tshark. Covers protocol statistics, DNS extraction, HTTP
   transaction analysis, TLS certificate inspection, security auditing,
-  and geographic IP resolution. Designed for investigating network
-  captures from security incidents.
+  and geographic IP resolution. Steps are phase-tagged against the
+  DFIReballz forensic process model; see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - network-forensics
   - incident-response
@@ -16,6 +17,10 @@ tools_required:
   - network-forensics/wireshark
   - network-forensics/geoip
 estimated_duration: 30-90 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
+  - analysis
 tags:
   - network-forensics
   - pcap
@@ -26,6 +31,7 @@ tags:
   - protocol-analysis
 steps:
   - id: analyze_pcap
+    phase: examination
     name: PCAP Overview Analysis
     tool: network-forensics/wireshark_analyze_pcap
     action: analyze_pcap
@@ -48,6 +54,7 @@ steps:
       output_dir: "{{case.working_dir}}/pcap_overview"
 
   - id: protocol_stats
+    phase: examination
     name: Protocol Statistics
     tool: network-forensics/wireshark_get_protocol_stats
     action: get_protocol_stats
@@ -68,6 +75,7 @@ steps:
       output_format: json
 
   - id: extract_dns
+    phase: examination
     name: DNS Query Extraction
     tool: network-forensics/wireshark_extract_dns
     action: extract_dns
@@ -93,6 +101,7 @@ steps:
       output_dir: "{{case.working_dir}}/dns_extraction"
 
   - id: extract_http
+    phase: examination
     name: HTTP Transaction Extraction
     tool: network-forensics/wireshark_extract_http
     action: extract_http
@@ -121,6 +130,7 @@ steps:
       output_format: json
 
   - id: extract_tls
+    phase: examination
     name: TLS Certificate and Handshake Analysis
     tool: network-forensics/wireshark_extract_tls
     action: extract_tls
@@ -149,6 +159,7 @@ steps:
       export_dir: "{{case.working_dir}}/tls_certs"
 
   - id: security_audit
+    phase: analysis
     name: Security Audit
     tool: network-forensics/wireshark_security_audit
     action: audit_traffic
@@ -175,6 +186,7 @@ steps:
       output_dir: "{{case.working_dir}}/security_audit"
 
   - id: geo_resolve
+    phase: analysis
     name: Geographic IP Resolution
     tool: network-forensics/wireshark_geo_resolve
     action: resolve_geoip
@@ -206,6 +218,8 @@ steps:
 
 This playbook provides a systematic approach to analyzing network packet captures from security incidents. It progresses from high-level traffic overview through protocol-specific extraction to security auditing and geographic analysis.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). Readiness, identification, acquisition (the PCAP capture itself), and reporting are handled by the orchestrator's pre-flight (planned) and the chain-of-custody playbook; this playbook covers examination and analysis of already-acquired PCAPs.
+
 ## Prerequisites
 
 - PCAP or PCAPNG file from the incident
@@ -216,13 +230,18 @@ This playbook provides a systematic approach to analyzing network packet capture
 
 ## Workflow
 
-1. **PCAP Overview** -- Establish capture parameters and identify top talkers
-2. **Protocol Statistics** -- Analyze protocol distribution and anomalies
-3. **DNS Extraction** -- Extract and analyze DNS queries for suspicious activity
-4. **HTTP Extraction** -- Recover HTTP transactions and exported objects
-5. **TLS Analysis** -- Inspect certificates, handshakes, and JA3 fingerprints
-6. **Security Audit** -- Detect attacks, policy violations, and suspicious patterns
-7. **Geographic Resolution** -- Map external connections to locations and ASNs
+### Phase 4 — Examination
+
+1. **PCAP Overview** — establish capture parameters and identify top talkers.
+2. **Protocol Statistics** — analyze protocol distribution and anomalies.
+3. **DNS Extraction** — extract and analyze DNS queries for suspicious activity.
+4. **HTTP Extraction** — recover HTTP transactions and exported objects.
+5. **TLS Analysis** — inspect certificates, handshakes, and JA3 fingerprints.
+
+### Phase 5 — Analysis
+
+6. **Security Audit** — detect attacks, policy violations, and suspicious patterns; classify severity.
+7. **Geographic Resolution** — map external connections to locations and ASNs.
 
 ## Decision Points
 
@@ -234,10 +253,7 @@ This playbook provides a systematic approach to analyzing network packet capture
 
 ## Output Artifacts
 
-- PCAP overview and capture statistics
-- Protocol hierarchy and conversation analysis
-- DNS query log with anomaly flags
-- HTTP transaction log with extracted objects
-- TLS certificate inventory and JA3 fingerprints
-- Security audit findings with severity ratings
-- Geographic connection map
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — PCAP overview and capture statistics; protocol hierarchy and conversation analysis; DNS query log with anomaly flags; HTTP transaction log with extracted objects; TLS certificate inventory and JA3 fingerprints
+- **05 Analysis** — security audit findings with severity ratings; geographic connection map

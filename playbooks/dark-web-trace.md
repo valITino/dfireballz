@@ -6,6 +6,8 @@ description: >
   starting from an IOC. Covers OSINT pivoting across surface and dark web,
   username correlation across marketplaces and forums, and threat
   intelligence enrichment to link personas, infrastructure, and campaigns.
+  Steps are phase-tagged against the DFIReballz forensic process model;
+  see [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - dark-web-investigation
   - threat-actor-profiling
@@ -19,6 +21,10 @@ tools_required:
   - threat-intel/virustotal
   - osint/domain_reputation
 estimated_duration: 60-120 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
+  - analysis
 tags:
   - dark-web
   - osint
@@ -28,6 +34,7 @@ tags:
   - attribution
 steps:
   - id: ioc_pivot
+    phase: examination
     name: Initial IOC Pivot
     tool: threat-intel/enrich_ioc
     action: deep_enrich
@@ -54,6 +61,7 @@ steps:
       output_format: json
 
   - id: osint_surface_pivot
+    phase: examination
     name: Surface Web OSINT Pivot
     tool: osint/spiderfoot_scan
     action: run_scan
@@ -79,6 +87,7 @@ steps:
       timeout: 900
 
   - id: username_correlation
+    phase: analysis
     name: Username Correlation
     tool: osint/username_search
     action: search_platforms
@@ -101,6 +110,7 @@ steps:
       output_format: json
 
   - id: infrastructure_mapping
+    phase: examination
     name: Infrastructure Mapping
     tool: osint/theharvester
     action: run_harvester
@@ -121,6 +131,7 @@ steps:
       output_format: json
 
   - id: threat_intel_enrichment
+    phase: analysis
     name: Consolidated Threat Intel Enrichment
     tool: threat-intel/enrich_ioc
     action: bulk_enrich
@@ -157,6 +168,8 @@ steps:
 
 This playbook provides a structured methodology for tracing threat actor activity from an initial indicator of compromise through dark web and surface web OSINT, username correlation, and threat intelligence enrichment. It is designed for investigators tracking criminal infrastructure and personas.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). Readiness, identification (the starting IOC), and reporting are handled by the orchestrator's pre-flight (planned); this playbook covers examination and analysis. Pivoting and infrastructure mapping that fetch and parse public data are tagged `examination`; persona correlation and attribution that interpret findings are tagged `analysis`.
+
 ## Prerequisites
 
 - Initial IOC (hash, IP, domain, email, cryptocurrency wallet, or username)
@@ -168,11 +181,16 @@ This playbook provides a structured methodology for tracing threat actor activit
 
 ## Workflow
 
-1. **IOC Pivot** -- Enrich the starting IOC and identify related indicators
-2. **Surface Web OSINT** -- Scan for surface web presence linked to dark web activity
-3. **Username Correlation** -- Link personas across platforms and forums
-4. **Infrastructure Mapping** -- Map hosting, domains, and services
-5. **Threat Intel Enrichment** -- Final correlation and attribution analysis
+### Phase 4 — Examination
+
+1. **IOC Pivot** — enrich the starting IOC and identify related indicators.
+2. **Surface Web OSINT** — scan for surface web presence linked to dark web activity.
+3. **Infrastructure Mapping** — map hosting, domains, and services.
+
+### Phase 5 — Analysis
+
+4. **Username Correlation** — link personas across platforms and forums; build the persona map.
+5. **Threat Intel Enrichment** — final correlation and attribution analysis.
 
 ## Decision Points
 
@@ -191,9 +209,7 @@ This playbook provides a structured methodology for tracing threat actor activit
 
 ## Output Artifacts
 
-- IOC pivot graph with related indicators
-- Surface web OSINT scan results
-- Persona correlation map
-- Infrastructure topology map
-- Threat intelligence enrichment report
-- Attribution assessment with confidence levels
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — IOC pivot graph with related indicators; surface web OSINT scan results; infrastructure topology map
+- **05 Analysis** — persona correlation map; threat intelligence enrichment report; attribution assessment with confidence levels

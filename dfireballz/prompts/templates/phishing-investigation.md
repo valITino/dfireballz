@@ -10,6 +10,12 @@ You MUST use the DFIReballz MCP servers and their tools to execute every phase b
 
 ---
 
+## Forensic Process Mapping
+
+This template follows the canonical six-phase forensic process model defined in `docs/forensic-process.md`: **Readiness → Identification → Acquisition → Examination → Analysis → Reporting**. Phase headers below correspond to that model. The phase-tagged playbook companion is `playbooks/phishing-investigation.md`.
+
+---
+
 ## Host Directory Layout
 
 All MCP containers share these mounted directories:
@@ -17,9 +23,12 @@ All MCP containers share these mounted directories:
 ```
 /cases/                     ← Case working directories (read/write)
   └── <case-id>/
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts
-      └── timelines/        ← Case-specific timelines
+      ├── 01-readiness/         ← Pre-flight: MCP health, tool versions, API keys, time
+      ├── 02-identification/    ← Evidence records, photos, authority
+      ├── 03-acquisition/       ← Working copies, hashes, manifests
+      ├── 04-examination/       ← Extracted artifacts (per evidence-id)
+      ├── 05-analysis/          ← Findings, IOCs, timelines, hypotheses
+      └── 06-reporting/         ← Closure manifest, sealed audit-log digest
 
 /evidence/                  ← Evidence files (READ-ONLY — never modify originals)
   └── <case-id>/
@@ -39,62 +48,72 @@ All MCP containers share these mounted directories:
 1. **Document the process thoroughly** — log every tool invocation, parameters, and result summary. Store process logs in `/reports/<case-id>/process-log.md` (or `/workspace/output/logs/process-log.md`).
 2. **Document every issue, error, warning, and problem thoroughly** — record full details including error messages, the tool/container involved, and remediation steps. Store in `/reports/<case-id>/issues-log.md` (or `/workspace/output/logs/issues-log.md`).
 3. **Log chain of custody** for every evidence access. **Never modify original evidence.**
-4. **Write findings incrementally** to `/cases/<case-id>/artifacts/` or `/workspace/output/findings/`.
+4. **Write findings incrementally** to the appropriate phase directory under `cases/<case-id>/0N-<phase>/` or `/workspace/output/findings/`.
 
 ---
 
-## Phase 1: Email Analysis
+## Phase 1 — Readiness
 
-1. Log chain of custody for the phishing email
-2. Parse email headers (SPF, DKIM, DMARC results)
-3. Identify true sender (X-Originating-IP, Received headers)
-4. Extract URLs, attachments, and embedded content
+1. Confirm the case is open with documented authority for handling the email
+2. Health-check the MCP servers needed: osint, threat-intel, kali-forensics, filesystem
+3. Verify required API keys are present: URLScan, VirusTotal, AbuseIPDB
+4. Confirm host time source is UTC-synced
+5. Pin tool versions for the playbook into `cases/<case-id>/01-readiness/case-precondition.json`
 
-## Phase 2: URL/Domain Investigation
+## Phase 2 — Identification
 
-Use **osint** and **threat-intel** MCP servers:
-1. Check suspicious URLs on URLScan
-2. DNSTwist for typosquatting detection
-3. theHarvester for related infrastructure
-4. WHOIS lookup on sender and phishing domains
-5. Shodan for hosting infrastructure analysis
+1. Classify the report as phishing
+2. Create the evidence record for the email: source, format (EML/MSG only — never forwarded), reporting party, authority reference
+3. Assign a case-scoped evidence ID
+4. Log chain of custody (`identified` action)
 
-## Phase 3: Attachment Analysis
+## Phase 3 — Acquisition
 
-Use **kali-forensics** and **binary-analysis** MCP servers:
-1. Hash all attachments (SHA256, MD5)
-2. VirusTotal lookup for known malware
-3. ExifTool for document metadata
-4. YARA scan for malicious macros/scripts
-5. If executable: Capa + Radare2 analysis
+1. Copy the email to `cases/<case-id>/03-acquisition/<evidence-id>/`
+2. Compute SHA-256 + MD5; record in the acquisition log
+3. Independently re-verify with a second hashing tool (`hashdeep`)
+4. Write the acquisition manifest entry
+5. Log chain of custody (`acquired`, `verified`)
 
-## Phase 4: Credential Harvesting Check
+## Phase 4 — Examination
 
-1. Screenshot the phishing page for evidence
-2. Identify credential harvesting form fields
-3. Check if credentials were submitted (browser artifacts)
-4. Determine scope of compromised accounts
+Operates on the working copy from Phase 3 — never on the original.
 
-## Phase 5: Threat Intelligence
+Use **kali-forensics**, **osint**, **threat-intel**, **binary-analysis**, **filesystem**:
+
+1. **Email headers** — parse SPF, DKIM, DMARC; identify true sender (X-Originating-IP, Received chain)
+2. **URL extraction** — pull all URLs and embedded content
+3. **URL/Domain investigation** — URLScan, DNSTwist (typosquatting), theHarvester, WHOIS, Shodan
+4. **Attachment analysis** — SHA256 + MD5 of every attachment; VirusTotal lookup; ExifTool metadata; YARA scan; Capa + Radare2 if executable
+5. **Credential harvesting check** — screenshot the phishing page; identify form fields; trace whether credentials were submitted
+6. **HTML artifact extraction** — forms, iframes, scripts, tracking pixels, brand impersonation
+
+## Phase 5 — Analysis
 
 Use **threat-intel** MCP server:
-1. Cross-reference IoCs with ThreatFox
-2. Check sender IP on AbuseIPDB
-3. MalwareBazaar for attachment hashes
-4. Identify related phishing campaigns
 
-## Phase 6: Reporting
+1. Cross-reference IoCs with ThreatFox; sender IP on AbuseIPDB; attachment hashes on MalwareBazaar
+2. Identify related phishing campaigns
+3. Build the consolidated IoC list (domains, IPs, URLs, hashes)
+4. Each finding must cite evidence ID + source-image SHA-256 + AI invocation audit ID
+5. Distinguish fact vs. interpretation; confirm or refute hypotheses (sender_spoofing, account_compromise, credential_harvesting, malware_delivery, brand_impersonation)
 
-1. Include email artifacts with header analysis
-2. Document attack chain from delivery to potential impact
-3. Provide user awareness recommendations
-4. Generate report and store in `/reports/<case-id>/`
-5. Finalize process log and issues log
+## Phase 6 — Reporting
+
+1. Call `get_payload_schema` for the ForensicPayload format
+2. Populate every applicable section with citations
+3. Document the attack chain from delivery to potential impact
+4. Provide user-awareness recommendations
+5. Re-verify the source-email hash one last time
+6. Call `aggregate_results`, then `generate_report` with format `"both"` (MD + PDF)
+7. Write closure manifest to `cases/<case-id>/06-reporting/closure-manifest.json`
+8. Log chain of custody (`case_closed`)
+9. Finalize process log and issues log
 
 ## MCP Containers to Use
 
 - osint (theHarvester, DNSTwist, subfinder, SpiderFoot)
 - threat-intel (VirusTotal, URLScan, AbuseIPDB, ThreatFox, MalwareBazaar, Shodan)
-- kali-forensics (ExifTool, YARA, bulk_extractor)
+- kali-forensics (ExifTool, YARA, bulk_extractor, hashdeep)
 - binary-analysis (Capa, Radare2 — for attachments)
 - filesystem (evidence file access)

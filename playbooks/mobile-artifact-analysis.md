@@ -6,7 +6,9 @@ description: >
   mobile device images. Covers SQLite database extraction, location
   history reconstruction, application usage analysis, contacts and
   call log extraction, and timeline correlation. Supports both Android
-  and iOS artifact structures.
+  and iOS artifact structures. Steps are phase-tagged against the
+  DFIReballz forensic process model; see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - mobile-forensics
   - digital-forensics
@@ -19,6 +21,9 @@ tools_required:
   - mobile-forensics/contact_extractor
   - mobile-forensics/call_log_extractor
 estimated_duration: 60-120 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
 tags:
   - mobile-forensics
   - sqlite
@@ -30,6 +35,7 @@ tags:
   - ios
 steps:
   - id: sqlite_extraction
+    phase: examination
     name: SQLite Database Extraction
     tool: mobile-forensics/sqlite_extractor
     action: extract_databases
@@ -62,6 +68,7 @@ steps:
       output_format: json
 
   - id: location_history
+    phase: examination
     name: Location History Reconstruction
     tool: mobile-forensics/location_analyzer
     action: extract_locations
@@ -99,6 +106,7 @@ steps:
       output_format: json
 
   - id: app_usage
+    phase: examination
     name: Application Usage Analysis
     tool: mobile-forensics/app_analyzer
     action: analyze_apps
@@ -146,6 +154,7 @@ steps:
       output_format: json
 
   - id: contacts_extraction
+    phase: examination
     name: Contacts Extraction
     tool: mobile-forensics/contact_extractor
     action: extract_contacts
@@ -182,6 +191,7 @@ steps:
       output_dir: "{{case.working_dir}}/contacts"
 
   - id: call_logs
+    phase: examination
     name: Call Log Extraction
     tool: mobile-forensics/call_log_extractor
     action: extract_call_logs
@@ -225,6 +235,8 @@ steps:
 
 This playbook provides a structured approach to extracting and analyzing forensic artifacts from mobile device images. It covers the key artifact categories relevant to most mobile forensics investigations, supporting both Android and iOS platforms.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). All steps in this playbook are examination work on an already-acquired mobile image. Pattern-level analysis (e.g. movement vs. stated location) is left to a separate analysis playbook or to the analyst, who should produce a `findings.json` under `05-analysis/` citing artifacts produced here.
+
 ## Prerequisites
 
 - Forensic image of the mobile device (physical or logical extraction)
@@ -236,11 +248,13 @@ This playbook provides a structured approach to extracting and analyzing forensi
 
 ## Workflow
 
-1. **SQLite Extraction** -- Locate and extract all databases with deleted record recovery
-2. **Location History** -- Reconstruct movement timeline from GPS, cell, and Wi-Fi data
-3. **Application Usage** -- Analyze messaging, social media, and application data
-4. **Contacts Extraction** -- Extract contacts from all sources including deleted entries
-5. **Call Log Extraction** -- Recover call records and analyze communication patterns
+### Phase 4 — Examination
+
+1. **SQLite Extraction** — locate and extract all databases with deleted record recovery.
+2. **Location History** — reconstruct movement timeline from GPS, cell, and Wi-Fi data.
+3. **Application Usage** — analyze messaging, social media, and application data.
+4. **Contacts Extraction** — extract contacts from all sources including deleted entries.
+5. **Call Log Extraction** — recover call records and analyze communication patterns.
 
 ## Decision Points
 
@@ -264,9 +278,6 @@ This playbook provides a structured approach to extracting and analyzing forensi
 
 ## Output Artifacts
 
-- SQLite database inventory with integrity status
-- Location history timeline with KML map export
-- Application usage analysis report
-- Complete contacts list with metadata
-- Call log records with pattern analysis
-- Consolidated investigation timeline
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — SQLite database inventory with integrity status; location history timeline with KML map export; application usage analysis report; complete contacts list with metadata; call log records with pattern analysis; consolidated investigation timeline

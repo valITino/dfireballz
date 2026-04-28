@@ -5,7 +5,9 @@ description: >
   Open-source intelligence playbook for investigating a person of interest.
   Covers username enumeration across platforms, email verification, automated
   OSINT scanning with SpiderFoot and theHarvester, and IOC enrichment for
-  any discovered infrastructure.
+  any discovered infrastructure. Steps are phase-tagged against the
+  DFIReballz forensic process model; see
+  [`docs/forensic-process.md`](../docs/forensic-process.md).
 case_types:
   - osint
   - person-investigation
@@ -17,6 +19,10 @@ tools_required:
   - osint/theharvester
   - threat-intel/ioc_enrichment
 estimated_duration: 30-60 minutes
+process_model: dfireballz/forensic-process-v1
+phases:
+  - examination
+  - analysis
 tags:
   - osint
   - person-investigation
@@ -25,6 +31,7 @@ tags:
   - social-media
 steps:
   - id: username_search
+    phase: examination
     name: Username Enumeration
     tool: osint/username_search
     action: search_platforms
@@ -41,6 +48,7 @@ steps:
       export_path: "{{case.working_dir}}/username_results"
 
   - id: email_check
+    phase: examination
     name: Email Verification and Account Discovery
     tool: osint/email_check
     action: check_email
@@ -56,6 +64,7 @@ steps:
       output_format: json
 
   - id: spiderfoot_scan
+    phase: examination
     name: SpiderFoot Automated OSINT Scan
     tool: osint/spiderfoot_scan
     action: run_scan
@@ -85,6 +94,7 @@ steps:
       timeout: 600
 
   - id: harvester_scan
+    phase: examination
     name: theHarvester Scan
     tool: osint/harvester_scan
     action: run_harvester
@@ -108,6 +118,7 @@ steps:
       output_format: json
 
   - id: ioc_enrich
+    phase: analysis
     name: Enrich Discovered IOCs
     tool: threat-intel/enrich_ioc
     action: bulk_enrich
@@ -136,6 +147,8 @@ steps:
 
 This playbook provides a structured approach to investigating a person of interest using open-source intelligence techniques. It progresses from targeted identifier lookups to broad automated scanning and concludes with threat intelligence enrichment.
 
+Steps are tagged against the [DFIReballz forensic process model](../docs/forensic-process.md). Readiness, identification (the target person), and reporting are handled by the orchestrator's pre-flight (planned); this playbook covers examination and analysis.
+
 ## Prerequisites
 
 - Target identifiers: at least one of username, email, or full name
@@ -146,11 +159,16 @@ This playbook provides a structured approach to investigating a person of intere
 
 ## Workflow
 
-1. **Username Enumeration** -- Search for the target username across platforms
-2. **Email Verification** -- Validate email and discover linked accounts
-3. **SpiderFoot Scan** -- Automated broad OSINT collection and correlation
-4. **theHarvester Scan** -- Gather associated infrastructure and contacts
-5. **IOC Enrichment** -- Correlate discovered indicators with threat intel
+### Phase 4 — Examination
+
+1. **Username Enumeration** — search for the target username across platforms.
+2. **Email Verification** — validate email and discover linked accounts.
+3. **SpiderFoot Scan** — automated broad OSINT collection and correlation.
+4. **theHarvester Scan** — gather associated infrastructure and contacts.
+
+### Phase 5 — Analysis
+
+5. **IOC Enrichment** — correlate discovered indicators with threat intel.
 
 ## Decision Points
 
@@ -167,8 +185,7 @@ This playbook provides a structured approach to investigating a person of intere
 
 ## Output Artifacts
 
-- Username enumeration report with confirmed accounts
-- Email verification and breach check results
-- SpiderFoot scan report with entity graph
-- theHarvester collection results
-- Consolidated enriched IOC report
+By phase (under `cases/<case-id>/0N-<phase>/`):
+
+- **04 Examination** — username enumeration report with confirmed accounts; email verification and breach check results; SpiderFoot scan report with entity graph; theHarvester collection results
+- **05 Analysis** — consolidated enriched IOC report

@@ -27,10 +27,13 @@ All MCP containers share these mounted directories. Use them for reading evidenc
 
 ```
 /cases/                     ← Case working directories (read/write)
-  └── <case-id>/            ← Per-case folder
-      ├── notes/            ← Investigator notes
-      ├── artifacts/        ← Extracted artifacts and incremental findings
-      └── timelines/        ← Case-specific timelines
+  └── <case-id>/            ← Per-case folder, organized by canonical phase
+      ├── 01-readiness/         ← Pre-flight: MCP health, tool versions, API keys, time
+      ├── 02-identification/    ← Evidence records, photographs, authority
+      ├── 03-acquisition/       ← Working copies + verified hashes + manifest
+      ├── 04-examination/       ← Per-evidence extracted artifacts
+      ├── 05-analysis/          ← Findings, IoCs, timelines, ATT&CK mapping
+      └── 06-reporting/         ← Closure manifest, sealed audit-log digest
 
 /evidence/                  ← Evidence files (READ-ONLY — NEVER modify originals)
   └── <case-id>/            ← Evidence scoped by case
@@ -47,6 +50,8 @@ All MCP containers share these mounted directories. Use them for reading evidenc
       ├── process-log.md    ← Process documentation
       └── issues-log.md     ← Error/issue documentation
 ```
+
+The phase-based subdirectory layout under `cases/<case-id>/` is canonical — see `docs/forensic-process.md`. Older templates may still reference flat `notes/`, `artifacts/`, `timelines/` subdirectories; those remain valid for ad-hoc working files but new work should follow the phase layout.
 
 **If running via Claude Code**, the paths are prefixed with `/workspace/`:
 - `/workspace/cases/`, `/workspace/evidence/` (read-only), `/workspace/reports/`
@@ -86,24 +91,53 @@ Throughout the ENTIRE investigation, you MUST maintain these three logs:
 
 ---
 
-## Investigation Workflow — Mandatory Phase Structure
+## Investigation Workflow — Canonical Phase Structure
 
-Every investigation MUST follow this phased approach. The exact phases depend on the investigation type, but the structure is fixed.
+Every investigation MUST follow the canonical six-phase forensic process model defined in `docs/forensic-process.md`: **Readiness → Identification → Acquisition → Examination → Analysis → Reporting**. The exact activities within each phase depend on the investigation type, but the phase structure is fixed.
 
-### Phase 1 — ALWAYS: Evidence Intake & Triage
+### Phase 1 — Readiness
 
-This is always the first phase, regardless of investigation type.
+Always the first phase. Prove the platform, the analyst, and the case are ready *before* any evidence is touched.
 
-1. Log chain of custody for ALL evidence files
-2. Verify evidence integrity — compute and record **SHA256** hashes (primary), plus MD5 and SHA1 (secondary)
-3. Identify evidence types (disk image, memory dump, PCAP, files, email, malware sample)
-4. Classify the incident type (malware, ransomware, data breach, unauthorized access, phishing, insider threat, OSINT)
-5. Establish investigation timeline boundaries
-6. Create a case directory under `/cases/<case-id>/`
+1. Confirm the case is open with documented authority for the investigation
+2. Health-check every MCP server the playbook will use
+3. Verify required API keys are present (presence, never values logged)
+4. Confirm UTC time sync on the host
+5. Pin tool/symbol-table/rule-set versions for the case
+6. Write `cases/<case-id>/01-readiness/case-precondition.json`
+7. Initialize the chain-of-custody log; record `case_opened`
 
-### Middle Phases — Investigation-Type-Specific Analysis
+### Phase 2 — Identification
 
-Select and execute the appropriate analysis phases based on the evidence and incident type. Each phase MUST reference which MCP container(s) and tools to use. The standard analysis domains are:
+Identify what evidence exists and is in scope.
+
+1. Enumerate evidence sources (disk images, memory dumps, PCAPs, files, emails, malware samples)
+2. Apply RFC 3227 order of volatility — volatile sources first
+3. Photograph physical items in situ before handling
+4. Document make/model/serial/condition/location for physical items
+5. Classify the incident type (malware, ransomware, data breach, unauthorized access, phishing, insider threat, OSINT)
+6. Establish investigation timeline boundaries
+7. Assign case-scoped evidence IDs (`<case-number>-E<NNN>`)
+8. Document the legal authority and scope per evidence item
+9. Log chain of custody (`identified`) for each item
+
+### Phase 3 — Acquisition
+
+Collect identified evidence with integrity preservation.
+
+1. Engage write-blocker for physical media where applicable
+2. Copy / image into `cases/<case-id>/03-acquisition/<evidence-id>/`
+3. Compute **SHA256** (primary) + MD5 / SHA1 (secondary) with simultaneous hashing
+4. Independently verify with a second tool (`hashdeep`)
+5. Write the acquisition manifest entry: tool, version, write-blocker, examiner, timestamps, hashes
+6. Log chain of custody (`acquired`, `verified`)
+7. Any hash mismatch is a stop-the-world event — document and escalate before proceeding
+
+### Phase 4 — Examination
+
+Render acquired data into a form suitable for analysis. Re-verify source-image hash before each major examination tool. Operate exclusively on working copies — never originals.
+
+Each phase MUST reference which MCP container(s) and tools to use. The standard examination domains are:
 
 **Disk & Filesystem Analysis** — Use `kali-forensics` and `filesystem`:
 - Sleuthkit for partition layout, file listing, deleted file recovery
@@ -145,6 +179,20 @@ Select and execute the appropriate analysis phases based on the evidence and inc
 - Data exfiltration indicators (large outbound transfers, DNS encoding)
 - Stream reconstruction, GeoIP on external IPs
 
+### Phase 5 — Analysis
+
+Interpret examined artifacts to answer the investigative questions; correlate; draw evidence-supported conclusions.
+
+**Network Forensics** — Use `network-forensics`:
+- PCAP overview (protocol statistics, conversations, endpoints)
+- DNS analysis (queries, suspicious domains, DNS tunneling)
+- HTTP/HTTPS analysis (requests, file downloads, POST data)
+- TLS analysis (JA3/JA3S fingerprints, certificate anomalies)
+- SMB/RDP analysis (lateral movement, file transfers)
+- Beaconing detection (regular-interval C2 patterns)
+- Data exfiltration indicators (large outbound transfers, DNS encoding)
+- Stream reconstruction, GeoIP on external IPs
+
 **OSINT & Reconnaissance** — Use `osint`:
 - Username/email enumeration: Maigret, Sherlock, Holehe
 - Domain/infrastructure: theHarvester, SpiderFoot, subfinder
@@ -164,7 +212,7 @@ Select and execute the appropriate analysis phases based on the evidence and inc
 - Identify initial access vector
 - Map full attack chain: initial access → execution → persistence → privilege escalation → lateral movement → collection → exfiltration → impact
 - Document anti-forensics and cleanup attempts
-- Store in `/cases/<case-id>/timelines/` or `/workspace/output/timelines/`
+- Store in `cases/<case-id>/05-analysis/timelines/` or `/workspace/output/timelines/`
 
 **Impact Assessment & Response** (for incident-response investigations):
 - Quantify data loss and exposure
@@ -173,9 +221,11 @@ Select and execute the appropriate analysis phases based on the evidence and inc
 - Determine regulatory notification requirements (GDPR, HIPAA, PCI-DSS)
 - Provide containment, eradication, and recovery recommendations
 
-### Final Phase — ALWAYS: Reporting & Deliverables
+Each finding cites: evidence ID(s) + source SHA256 + AI-invocation audit IDs (from `output/logs/ai_invocations.jsonl`); marked fact vs. interpretation.
 
-This is always the last phase, regardless of investigation type.
+### Phase 6 — Reporting / Closure
+
+Always the last phase. Produce the formal deliverable, finalize chain of custody, archive.
 
 1. Call `get_payload_schema` to retrieve the expected ForensicPayload format
 2. Structure ALL findings into a complete **ForensicPayload** with every applicable section:
@@ -188,10 +238,14 @@ This is always the last phase, regardless of investigation type.
    - `iocs` — all indicators of compromise (hashes, IPs, domains, URLs, emails)
    - `timeline_events` — chronological reconstruction of the incident
    - `mitre_techniques` — mapped MITRE ATT&CK technique IDs
-3. Call `aggregate_results` to validate and persist the payload
-4. Call `generate_report` with format `"both"` for MD + PDF output
-5. Verify the report is written to `/reports/<case-id>/`
-6. Ensure the process log (`process-log.md`) and issues log (`issues-log.md`) are finalized and stored
+3. Re-verify every source-evidence hash one last time and attach the result
+4. Sign / seal the audit log: capture SHA-256 of the JSONL audit trail; pin into report and into chain-of-custody log
+5. Call `aggregate_results` to validate and persist the payload
+6. Call `generate_report` with format `"both"` for MD + PDF output
+7. Verify the report is written to `/reports/<case-id>/`
+8. Write `cases/<case-id>/06-reporting/closure-manifest.json`
+9. Log chain of custody (`case_closed`)
+10. Ensure the process log (`process-log.md`) and issues log (`issues-log.md`) are finalized and stored
 
 ---
 
