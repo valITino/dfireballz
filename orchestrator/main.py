@@ -83,6 +83,8 @@ class IOCCreate(BaseModel):
 class PlaybookRun(BaseModel):
     playbook_name: str
     evidence_id: str | None = None
+    strict: bool = False
+    loopback_reason: str | None = None
 
 
 class AIInvocationLog(BaseModel):
@@ -216,8 +218,13 @@ async def list_playbooks() -> list[dict[str, Any]]:
 
 @app.post("/cases/{case_id}/playbooks/run")
 async def run_playbook(case_id: UUID, run: PlaybookRun) -> dict[str, Any]:
-    """Launch a playbook against a case."""
-    return await app.state.playbook_runner.run(str(case_id), run.playbook_name)
+    """Execute a playbook against a case with optional strict phase gating."""
+    return await app.state.playbook_runner.run(
+        str(case_id),
+        run.playbook_name,
+        strict=run.strict,
+        loopback_reason=run.loopback_reason,
+    )
 
 
 @app.get("/cases/{case_id}/playbooks")

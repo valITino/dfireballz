@@ -42,3 +42,23 @@ def test_ioc_create_model():
     assert ioc.ioc_type == "ip"
     assert ioc.value == "192.168.1.1"
     assert ioc.confidence == 50
+
+
+def test_playbook_run_model_defaults():
+    """PlaybookRun keeps strict=False and loopback_reason=None by default
+    so existing callers stay compatible."""
+    from main import PlaybookRun
+    run = PlaybookRun(playbook_name="pb-phishing-investigation")
+    assert run.strict is False
+    assert run.loopback_reason is None
+
+
+def test_playbook_run_model_strict():
+    from main import PlaybookRun
+    run = PlaybookRun(
+        playbook_name="pb-phishing-investigation",
+        strict=True,
+        loopback_reason="re-imaging required",
+    )
+    assert run.strict is True
+    assert run.loopback_reason == "re-imaging required"
